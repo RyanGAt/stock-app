@@ -1,11 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/item_purchase.dart';
+import 'package:uuid/uuid.dart';
 
 class SupabaseService {
   SupabaseService(this.client);
 
   final SupabaseClient client;
+  static const _uuid = Uuid();
 
   Future<List<Map<String, dynamic>>> fetchItems(String userId) async {
     final response = await client
@@ -109,7 +109,12 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> createPurchase(Map<String, dynamic> data) async {
-    final response = await client.from('purchases').insert(data).select().single();
+    final payload = Map<String, dynamic>.from(data);
+    final id = payload['id'] as String?;
+    if (id == null || id.isEmpty) {
+      payload['id'] = _uuid.v4();
+    }
+    final response = await client.from('purchases').insert(payload).select().single();
     return Map<String, dynamic>.from(response);
   }
 
@@ -138,23 +143,11 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<List<ItemPurchase>> fetchItemPurchases(String userId) async {
-    final response = await client
-        .from('purchase_details')
-        .select()
-        .eq('user_id', userId)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response).map(ItemPurchase.fromMap).toList();
-  }
-
   Future<void> createPurchaseDetail(Map<String, dynamic> data) async {
-    await client.from('purchase_details').insert(data);
-  }
-
-  Future<void> createItemPurchase(ItemPurchase purchase) async {
-    final payload = Map<String, dynamic>.from(purchase.toMap());
-    if (payload['id'] == '') {
-      payload.remove('id');
+    final payload = Map<String, dynamic>.from(data);
+    final id = payload['id'] as String?;
+    if (id == null || id.isEmpty) {
+      payload['id'] = _uuid.v4();
     }
     await client.from('purchase_details').insert(payload);
   }
