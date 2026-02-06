@@ -1,7 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models/item_purchase.dart';
-
 class SupabaseService {
   SupabaseService(this.client);
 
@@ -138,25 +136,8 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<List<ItemPurchase>> fetchItemPurchases(String userId) async {
-    final response = await client
-        .from('purchase_details')
-        .select()
-        .eq('user_id', userId)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response).map(ItemPurchase.fromMap).toList();
-  }
-
   Future<void> createPurchaseDetail(Map<String, dynamic> data) async {
     await client.from('purchase_details').insert(data);
-  }
-
-  Future<void> createItemPurchase(ItemPurchase purchase) async {
-    final payload = Map<String, dynamic>.from(purchase.toMap());
-    if (payload['id'] == '') {
-      payload.remove('id');
-    }
-    await client.from('purchase_details').insert(payload);
   }
 
   Future<void> updatePurchaseDetail(String id, Map<String, dynamic> data) async {
