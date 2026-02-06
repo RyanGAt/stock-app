@@ -232,6 +232,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredListings = _filteredListings();
+    final platforms = [
+      'All',
+      ..._listings
+          .map((row) => row['platform'])
+          .whereType<String>()
+          .where((platform) => platform.isNotEmpty)
+          .toSet(),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,8 +265,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
           children: [
             DropdownButton<String>(
               value: _platformFilter,
-              items: ['All', ..._listings.map((row) => row['platform'] ?? '').where((p) => p != '').toSet()]
-                  .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+              items: platforms
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) => setState(() => _platformFilter = value ?? 'All'),
             ),

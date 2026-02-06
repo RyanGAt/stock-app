@@ -29,7 +29,7 @@ class StockApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
         scaffoldBackgroundColor: const Color(0xFFF7F7FA),
-        cardTheme: const CardTheme(color: Colors.white),
+        cardTheme: const CardThemeData(color: Colors.white),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
