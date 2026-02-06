@@ -5,12 +5,18 @@ Flutter rebuild of the StockPlunge web app with Supabase-backed inventory manage
 ## Setup
 
 1. Install Flutter 3.3+.
-2. Provide Supabase credentials using `--dart-define`.
+2. Provide Supabase credentials using `--dart-define` on the same `flutter run` command (do not run `--dart-define` by itself).
 
 ```bash
 flutter run -d chrome \
   --dart-define=SUPABASE_URL=your_supabase_url \
   --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+PowerShell (single line):
+
+```powershell
+flutter run -d chrome --dart-define=SUPABASE_URL=your_supabase_url --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ## Supabase
