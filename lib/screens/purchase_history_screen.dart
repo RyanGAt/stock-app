@@ -35,7 +35,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     if (userId == null) return;
     setState(() => _loading = true);
     final results = await Future.wait([
-      _service.fetchPurchaseOrders(userId),
+      _service.fetchPurchases(userId),
       _service.fetchPurchaseDetails(userId),
       _service.fetchItems(userId),
     ]);
@@ -272,7 +272,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     };
 
     if (purchase == null) {
-      final createdPurchase = await _service.createPurchaseOrder(payload);
+      final createdPurchase = await _service.createPurchase(payload);
       final purchaseId = createdPurchase['id'] as String?;
       if (purchaseId != null) {
         for (final detail in draftDetails) {
@@ -288,7 +288,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       }
     } else {
       final purchaseId = purchase['id'] as String;
-      await _service.updatePurchaseOrder(purchase['id'] as String, payload);
+      await _service.updatePurchase(purchase['id'] as String, payload);
       for (final id in deletedDetailIds) {
         await _service.deletePurchaseDetail(id);
       }
@@ -411,7 +411,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   }
 
   Future<void> _deletePurchaseOrder(String id) async {
-    await _service.deletePurchaseOrder(id);
+    await _service.deletePurchase(id);
     await _load();
   }
 
