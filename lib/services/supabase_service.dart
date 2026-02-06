@@ -1,9 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 class SupabaseService {
   SupabaseService(this.client);
 
   final SupabaseClient client;
+  static const _uuid = Uuid();
 
   Future<List<Map<String, dynamic>>> fetchItems(String userId) async {
     final response = await client
@@ -107,7 +109,12 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> createPurchase(Map<String, dynamic> data) async {
-    final response = await client.from('purchases').insert(data).select().single();
+    final payload = Map<String, dynamic>.from(data);
+    final id = payload['id'] as String?;
+    if (id == null || id.isEmpty) {
+      payload['id'] = _uuid.v4();
+    }
+    final response = await client.from('purchases').insert(payload).select().single();
     return Map<String, dynamic>.from(response);
   }
 
@@ -137,7 +144,12 @@ class SupabaseService {
   }
 
   Future<void> createPurchaseDetail(Map<String, dynamic> data) async {
-    await client.from('purchase_details').insert(data);
+    final payload = Map<String, dynamic>.from(data);
+    final id = payload['id'] as String?;
+    if (id == null || id.isEmpty) {
+      payload['id'] = _uuid.v4();
+    }
+    await client.from('purchase_details').insert(payload);
   }
 
   Future<void> updatePurchaseDetail(String id, Map<String, dynamic> data) async {
