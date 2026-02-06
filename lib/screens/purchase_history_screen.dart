@@ -268,6 +268,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     final payload = {
       'user_id': userId,
       'bought_date': boughtDate?.toIso8601String(),
+      'total_price': _calculateTotal(draftDetails),
     };
 
     if (purchase == null) {
