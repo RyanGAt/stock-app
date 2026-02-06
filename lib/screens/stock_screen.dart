@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_service.dart';
+import '../widgets/scrollable_data_table.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stat_card.dart';
 
@@ -166,62 +167,59 @@ class _StockScreenState extends State<StockScreen> {
               ? const Center(child: CircularProgressIndicator())
               : SectionCard(
                   title: 'Stock',
-                  child: SingleChildScrollView(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Image')),
-                          DataColumn(label: Text('Item')),
-                          DataColumn(label: Text('Sizes')),
-                          DataColumn(label: Text('Avg Cost')),
-                          DataColumn(label: Text('Total Qty')),
-                          DataColumn(label: Text('Available')),
-                          DataColumn(label: Text('Actions')),
-                        ],
-                        rows: _items
-                            .map(
-                              (item) {
-                                final itemStock = _stock.where((row) => row['item_id'] == item['id']).toList();
-                                if (itemStock.isEmpty) return null;
-                                final avgCost = _costs
-                                        .firstWhere(
-                                          (cost) => cost['item_id'] == item['id'],
-                                          orElse: () => {'avg_unit_cost': 0},
-                                        )['avg_unit_cost'] as num? ??
-                                    0;
-                                final totalQty = itemStock.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
-                                return DataRow(
-                                  cells: [
-                                    DataCell(item['main_image_url'] == null
-                                        ? const Icon(Icons.image_not_supported)
-                                        : Image.network(item['main_image_url'],
-                                            width: 40, height: 40, fit: BoxFit.cover)),
-                                    DataCell(Text(item['title'] ?? '')),
-                                    DataCell(
-                                      Wrap(
-                                        spacing: 8,
-                                        children: itemStock
-                                            .map((row) => Chip(label: Text('${row['size'] ?? 'OS'}: ${row['quantity']}')))
-                                            .toList(),
-                                      ),
+                  child: ScrollableDataTable(
+                    table: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Image')),
+                        DataColumn(label: Text('Item')),
+                        DataColumn(label: Text('Sizes')),
+                        DataColumn(label: Text('Avg Cost')),
+                        DataColumn(label: Text('Total Qty')),
+                        DataColumn(label: Text('Available')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      rows: _items
+                          .map(
+                            (item) {
+                              final itemStock = _stock.where((row) => row['item_id'] == item['id']).toList();
+                              if (itemStock.isEmpty) return null;
+                              final avgCost = _costs
+                                      .firstWhere(
+                                        (cost) => cost['item_id'] == item['id'],
+                                        orElse: () => {'avg_unit_cost': 0},
+                                      )['avg_unit_cost'] as num? ??
+                                  0;
+                              final totalQty = itemStock.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
+                              return DataRow(
+                                cells: [
+                                  DataCell(item['main_image_url'] == null
+                                      ? const Icon(Icons.image_not_supported)
+                                      : Image.network(item['main_image_url'],
+                                          width: 40, height: 40, fit: BoxFit.cover)),
+                                  DataCell(Text(item['title'] ?? '')),
+                                  DataCell(
+                                    Wrap(
+                                      spacing: 8,
+                                      children: itemStock
+                                          .map((row) => Chip(label: Text('${row['size'] ?? 'OS'}: ${row['quantity']}')))
+                                          .toList(),
                                     ),
-                                    DataCell(Text(_currency(avgCost))),
-                                    DataCell(Text(totalQty.toString())),
-                                    DataCell(Text(totalQty.toString())),
-                                    DataCell(
-                                      TextButton(
-                                        onPressed: () => _openManageDialog(item['id'] as String),
-                                        child: const Text('Manage'),
-                                      ),
+                                  ),
+                                  DataCell(Text(_currency(avgCost))),
+                                  DataCell(Text(totalQty.toString())),
+                                  DataCell(Text(totalQty.toString())),
+                                  DataCell(
+                                    TextButton(
+                                      onPressed: () => _openManageDialog(item['id'] as String),
+                                      child: const Text('Manage'),
                                     ),
-                                  ],
-                                );
-                              },
-                            )
-                            .whereType<DataRow>()
-                            .toList(),
-                      ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )
+                          .whereType<DataRow>()
+                          .toList(),
                     ),
                   ),
                 ),
