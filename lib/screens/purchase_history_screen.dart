@@ -50,13 +50,9 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   Future<void> _openPurchaseOrderDialog({Map<String, dynamic>? purchase}) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    final totalPriceController = TextEditingController(text: purchase?['total_price']?.toString() ?? '');
     DateTime? boughtDate = purchase?['bought_date'] == null
         ? null
         : DateTime.parse(purchase?['bought_date'] as String);
-    DateTime? arrivedDate = purchase?['arrived_date'] == null
-        ? null
-        : DateTime.parse(purchase?['arrived_date'] as String);
     final detailQtyController = TextEditingController(text: '1');
     final detailPriceController = TextEditingController(text: '');
     final detailSizeController = TextEditingController(text: '');
@@ -83,12 +79,6 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                    controller: totalPriceController,
-                    decoration: const InputDecoration(labelText: 'Total Price'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 16,
                     runSpacing: 8,
@@ -117,39 +107,17 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 260,
-                        child: Text(
-                          arrivedDate == null ? 'Arrived date not set' : DateFormat.yMMMd().format(arrivedDate!),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
-                            initialDate: arrivedDate ?? boughtDate ?? DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setModalState(() => arrivedDate = picked);
-                          }
-                        },
-                        icon: const Icon(Icons.event_available),
-                        label: const Text('Pick Arrived Date'),
-                      ),
-                    ],
-                  ),
                   const Divider(height: 28),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text('Purchase Details', style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Total: ${_currency(_calculateTotal(draftDetails))}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -291,7 +259,6 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     );
 
     if (result != true) {
-      totalPriceController.dispose();
       detailQtyController.dispose();
       detailPriceController.dispose();
       detailSizeController.dispose();
@@ -300,9 +267,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
 
     final payload = {
       'user_id': userId,
-      'total_price': num.tryParse(totalPriceController.text) ?? 0,
       'bought_date': boughtDate?.toIso8601String(),
-      'arrived_date': arrivedDate?.toIso8601String(),
     };
 
     if (purchase == null) {
@@ -339,7 +304,6 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       }
     }
     await _load();
-    totalPriceController.dispose();
     detailQtyController.dispose();
     detailPriceController.dispose();
     detailSizeController.dispose();
@@ -455,6 +419,26 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     await _load();
   }
 
+  num _calculateTotal(Iterable<Map<String, dynamic>> details) {
+    return details.fold<num>(
+      0,
+      (sum, row) => sum + (row['unit_price'] as num? ?? 0) * (row['quantity'] as int? ?? 0),
+    );
+  }
+
+  num _purchaseTotal(String purchaseId) {
+    return _calculateTotal(_purchaseDetails.where((row) => row['purchase_id'] == purchaseId));
+  }
+
+  String _purchaseLabel(Map<String, dynamic>? purchase) {
+    if (purchase == null) return 'Purchase';
+    final boughtDate = purchase['bought_date'] as String?;
+    final formattedDate = boughtDate == null ? 'No date' : boughtDate;
+    final purchaseId = purchase['id'] as String?;
+    final totalPrice = purchaseId == null ? 0 : _purchaseTotal(purchaseId);
+    return '$formattedDate • ${_currency(totalPrice)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalSpend = _purchaseDetails.fold<num>(
@@ -519,16 +503,15 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
                                 columns: const [
                                   DataColumn(label: Text('Total Price')),
                                   DataColumn(label: Text('Bought Date')),
-                                  DataColumn(label: Text('Arrived Date')),
                                   DataColumn(label: Text('Actions')),
                                 ],
                                 rows: _purchaseOrders
                                     .map(
                                       (purchase) => DataRow(
                                         cells: [
-                                          DataCell(Text(_currency(purchase['total_price'] as num? ?? 0))),
+                                          DataCell(Text(_currency(
+                                              _purchaseTotal(purchase['id'] as String? ?? '')))),
                                           DataCell(Text(purchase['bought_date'] ?? '')),
-                                          DataCell(Text(purchase['arrived_date'] ?? '')),
                                           DataCell(
                                             Row(
                                               children: [
@@ -619,14 +602,6 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
 }
 
 String _currency(num value) => NumberFormat.currency(symbol: '£').format(value);
-
-String _purchaseLabel(Map<String, dynamic>? purchase) {
-  if (purchase == null) return 'Purchase';
-  final boughtDate = purchase['bought_date'] as String?;
-  final formattedDate = boughtDate == null ? 'No date' : boughtDate;
-  final totalPrice = purchase['total_price'] as num? ?? 0;
-  return '$formattedDate • ${_currency(totalPrice)}';
-}
 
 extension on List {
   dynamic get firstOrNull => isEmpty ? null : first;
