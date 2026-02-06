@@ -74,176 +74,210 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
           title: Text(purchase == null ? 'Add Purchase' : 'Edit Purchase'),
+          insetPadding: const EdgeInsets.all(24),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: totalPriceController,
-                  decoration: const InputDecoration(labelText: 'Total Price'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(boughtDate == null
-                          ? 'Bought date not set'
-                          : DateFormat.yMMMd().format(boughtDate!)),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                          initialDate: boughtDate ?? DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setModalState(() => boughtDate = picked);
-                        }
-                      },
-                      child: const Text('Pick Date'),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(arrivedDate == null
-                          ? 'Arrived date not set'
-                          : DateFormat.yMMMd().format(arrivedDate!)),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                          initialDate: arrivedDate ?? boughtDate ?? DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setModalState(() => arrivedDate = picked);
-                        }
-                      },
-                      child: const Text('Pick Date'),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Purchase Details', style: Theme.of(context).textTheme.titleMedium),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedDetailItemId,
-                  decoration: const InputDecoration(labelText: 'Item'),
-                  items: _items
-                      .map(
-                        (item) => DropdownMenuItem(
-                          value: item['id'] as String,
-                          child: Text(item['title'] as String),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 560, maxWidth: 720),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: totalPriceController,
+                    decoration: const InputDecoration(labelText: 'Total Price'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 260,
+                        child: Text(
+                          boughtDate == null ? 'Bought date not set' : DateFormat.yMMMd().format(boughtDate!),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setModalState(() => selectedDetailItemId = value),
-                ),
-                TextField(
-                  controller: detailSizeController,
-                  decoration: const InputDecoration(labelText: 'Size'),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: detailQtyController,
-                        decoration: const InputDecoration(labelText: 'Quantity'),
-                        keyboardType: TextInputType.number,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: detailPriceController,
-                        decoration: const InputDecoration(labelText: 'Unit Price'),
-                        keyboardType: TextInputType.number,
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            initialDate: boughtDate ?? DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setModalState(() => boughtDate = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.event),
+                        label: const Text('Pick Bought Date'),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: selectedDetailItemId == null
-                          ? null
-                          : () {
-                              final item = _items.firstWhere(
-                                (item) => item['id'] == selectedDetailItemId,
-                                orElse: () => {},
-                              );
-                              final sizeValue = detailSizeController.text.trim();
-                              setModalState(() {
-                                draftDetails.add({
-                                  'item_id': selectedDetailItemId,
-                                  'items': item,
-                                  'size': sizeValue.isEmpty ? null : sizeValue,
-                                  'quantity': int.tryParse(detailQtyController.text) ?? 1,
-                                  'unit_price': num.tryParse(detailPriceController.text) ?? 0,
-                                });
-                                detailQtyController.text = '1';
-                                detailPriceController.clear();
-                                detailSizeController.clear();
-                              });
-                            },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add detail'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 220,
-                  child: draftDetails.isEmpty
-                      ? const Center(child: Text('No details added yet.'))
-                      : ScrollableDataTable(
-                          table: DataTable(
-                            columns: const [
-                              DataColumn(label: Text('Item')),
-                              DataColumn(label: Text('Size')),
-                              DataColumn(label: Text('Qty')),
-                              DataColumn(label: Text('Unit Price')),
-                              DataColumn(label: Text('Line Total')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: draftDetails
-                                .map(
-                                  (detail) => DataRow(
-                                    cells: [
-                                      DataCell(Text(detail['items']?['title'] ?? '')),
-                                      DataCell(Text(detail['size'] ?? '')),
-                                      DataCell(Text('${detail['quantity']}')),
-                                      DataCell(Text(_currency(detail['unit_price'] as num? ?? 0))),
-                                      DataCell(Text(
-                                          _currency((detail['unit_price'] as num? ?? 0) * (detail['quantity'] as int)))),
-                                      DataCell(
-                                        IconButton(
-                                          icon: const Icon(Icons.delete),
-                                          onPressed: () {
-                                            final id = detail['id'] as String?;
-                                            if (id != null) {
-                                              deletedDetailIds.add(id);
-                                            }
-                                            setModalState(() => draftDetails.remove(detail));
-                                          },
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 260,
+                        child: Text(
+                          arrivedDate == null ? 'Arrived date not set' : DateFormat.yMMMd().format(arrivedDate!),
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                            initialDate: arrivedDate ?? boughtDate ?? DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setModalState(() => arrivedDate = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.event_available),
+                        label: const Text('Pick Arrived Date'),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 28),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Purchase Details', style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: 320,
+                        child: DropdownButtonFormField<String>(
+                          value: selectedDetailItemId,
+                          decoration: const InputDecoration(labelText: 'Item'),
+                          items: _items
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item['id'] as String,
+                                  child: Text(item['title'] as String),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) => setModalState(() => selectedDetailItemId = value),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 200,
+                        child: TextField(
+                          controller: detailSizeController,
+                          decoration: const InputDecoration(labelText: 'Size'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 140,
+                        child: TextField(
+                          controller: detailQtyController,
+                          decoration: const InputDecoration(labelText: 'Quantity'),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 180,
+                        child: TextField(
+                          controller: detailPriceController,
+                          decoration: const InputDecoration(labelText: 'Unit Price'),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          onPressed: selectedDetailItemId == null
+                              ? null
+                              : () {
+                                  final item = _items.firstWhere(
+                                    (item) => item['id'] == selectedDetailItemId,
+                                    orElse: () => {},
+                                  );
+                                  final sizeValue = detailSizeController.text.trim();
+                                  setModalState(() {
+                                    draftDetails.add({
+                                      'item_id': selectedDetailItemId,
+                                      'items': item,
+                                      'size': sizeValue.isEmpty ? null : sizeValue,
+                                      'quantity': int.tryParse(detailQtyController.text) ?? 1,
+                                      'unit_price': num.tryParse(detailPriceController.text) ?? 0,
+                                    });
+                                    detailQtyController.text = '1';
+                                    detailPriceController.clear();
+                                    detailSizeController.clear();
+                                  });
+                                },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add detail'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 260,
+                    child: draftDetails.isEmpty
+                        ? const Center(child: Text('No details added yet.'))
+                        : ScrollableDataTable(
+                            table: DataTable(
+                              columns: const [
+                                DataColumn(label: Text('Item')),
+                                DataColumn(label: Text('Size')),
+                                DataColumn(label: Text('Qty')),
+                                DataColumn(label: Text('Unit Price')),
+                                DataColumn(label: Text('Line Total')),
+                                DataColumn(label: Text('Actions')),
+                              ],
+                              rows: draftDetails
+                                  .map(
+                                    (detail) => DataRow(
+                                      cells: [
+                                        DataCell(Text(detail['items']?['title'] ?? '')),
+                                        DataCell(Text(detail['size'] ?? '')),
+                                        DataCell(Text('${detail['quantity']}')),
+                                        DataCell(Text(_currency(detail['unit_price'] as num? ?? 0))),
+                                        DataCell(Text(_currency(
+                                            (detail['unit_price'] as num? ?? 0) *
+                                                (detail['quantity'] as int)))),
+                                        DataCell(
+                                          IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            onPressed: () {
+                                              final id = detail['id'] as String?;
+                                              if (id != null) {
+                                                deletedDetailIds.add(id);
+                                              }
+                                              setModalState(() => draftDetails.remove(detail));
+                                            },
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                .toList(),
+                                      ],
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
                           ),
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
