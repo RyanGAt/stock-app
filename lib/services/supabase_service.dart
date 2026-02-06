@@ -114,10 +114,18 @@ class SupabaseService {
   }
 
   Future<void> updatePurchaseOrder(String id, Map<String, dynamic> data) async {
+    await updatePurchase(id, data);
+  }
+
+  Future<void> updatePurchase(String id, Map<String, dynamic> data) async {
     await client.from('purchases').update(data).eq('id', id);
   }
 
   Future<void> deletePurchaseOrder(String id) async {
+    await deletePurchase(id);
+  }
+
+  Future<void> deletePurchase(String id) async {
     await client.from('purchases').delete().eq('id', id);
   }
 
