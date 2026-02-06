@@ -89,25 +89,46 @@ class SupabaseService {
     await client.from('item_stock').delete().eq('id', id);
   }
 
-  Future<List<Map<String, dynamic>>> fetchPurchases(String userId) async {
+  Future<List<Map<String, dynamic>>> fetchPurchaseOrders(String userId) async {
     final response = await client
-        .from('item_purchases')
-        .select('*, items(*)')
+        .from('purchases')
+        .select()
         .eq('user_id', userId)
-        .order('purchased_at', ascending: false);
+        .order('bought_date', ascending: false);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<void> createPurchase(Map<String, dynamic> data) async {
-    await client.from('item_purchases').insert(data);
+  Future<void> createPurchaseOrder(Map<String, dynamic> data) async {
+    await client.from('purchases').insert(data);
   }
 
-  Future<void> updatePurchase(String id, Map<String, dynamic> data) async {
-    await client.from('item_purchases').update(data).eq('id', id);
+  Future<void> updatePurchaseOrder(String id, Map<String, dynamic> data) async {
+    await client.from('purchases').update(data).eq('id', id);
   }
 
-  Future<void> deletePurchase(String id) async {
-    await client.from('item_purchases').delete().eq('id', id);
+  Future<void> deletePurchaseOrder(String id) async {
+    await client.from('purchases').delete().eq('id', id);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPurchaseDetails(String userId) async {
+    final response = await client
+        .from('purchase_details')
+        .select('*, items(*), purchases(*)')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> createPurchaseDetail(Map<String, dynamic> data) async {
+    await client.from('purchase_details').insert(data);
+  }
+
+  Future<void> updatePurchaseDetail(String id, Map<String, dynamic> data) async {
+    await client.from('purchase_details').update(data).eq('id', id);
+  }
+
+  Future<void> deletePurchaseDetail(String id) async {
+    await client.from('purchase_details').delete().eq('id', id);
   }
 
   Future<List<Map<String, dynamic>>> fetchItemCosts(String userId) async {
