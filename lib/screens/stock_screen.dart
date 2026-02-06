@@ -18,7 +18,7 @@ class _StockScreenState extends State<StockScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _stock = [];
   List<Map<String, dynamic>> _items = [];
-  List<Map<String, dynamic>> _purchases = [];
+  List<Map<String, dynamic>> _purchaseDetails = [];
   List<Map<String, dynamic>> _costs = [];
 
   @override
@@ -35,13 +35,13 @@ class _StockScreenState extends State<StockScreen> {
     final results = await Future.wait([
       _service.fetchItemStock(userId),
       _service.fetchItems(userId),
-      _service.fetchPurchases(userId),
+      _service.fetchPurchaseDetails(userId),
       _service.fetchItemCosts(userId),
     ]);
     setState(() {
       _stock = results[0];
       _items = results[1];
-      _purchases = results[2];
+      _purchaseDetails = results[2];
       _costs = results[3];
       _loading = false;
     });
@@ -49,7 +49,7 @@ class _StockScreenState extends State<StockScreen> {
 
   Future<void> _openManageDialog(String itemId) async {
     final itemStock = _stock.where((row) => row['item_id'] == itemId).toList();
-    final itemPurchases = _purchases.where((row) => row['item_id'] == itemId).toList();
+    final itemPurchases = _purchaseDetails.where((row) => row['item_id'] == itemId).toList();
 
     await showDialog<void>(
       context: context,
@@ -100,13 +100,14 @@ class _StockScreenState extends State<StockScreen> {
                         itemCount: itemPurchases.length,
                         itemBuilder: (context, index) {
                           final purchase = itemPurchases[index];
+                          final purchaseDate = purchase['purchases']?['bought_date'] as String?;
                           return ListTile(
                             title: Text('Qty ${purchase['quantity']} @ ${_currency(purchase['unit_price'] as num)}'),
-                            subtitle: Text(purchase['purchased_at'] ?? 'No date'),
+                            subtitle: Text(purchaseDate ?? 'No date'),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete),
                               onPressed: () async {
-                                await _service.deletePurchase(purchase['id'] as String);
+                                await _service.deletePurchaseDetail(purchase['id'] as String);
                                 await _load();
                               },
                             ),
@@ -135,7 +136,7 @@ class _StockScreenState extends State<StockScreen> {
       0,
       (sum, cost) => sum + (cost['avg_unit_cost'] as num? ?? 0) * (cost['total_purchased_qty'] as int? ?? 0),
     );
-    final totalSpend = _purchases.fold<num>(
+    final totalSpend = _purchaseDetails.fold<num>(
       0,
       (sum, row) => sum + (row['unit_price'] as num) * (row['quantity'] as int),
     );
@@ -166,58 +167,61 @@ class _StockScreenState extends State<StockScreen> {
               : SectionCard(
                   title: 'Stock',
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Image')),
-                        DataColumn(label: Text('Item')),
-                        DataColumn(label: Text('Sizes')),
-                        DataColumn(label: Text('Avg Cost')),
-                        DataColumn(label: Text('Total Qty')),
-                        DataColumn(label: Text('Available')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: _items
-                          .map(
-                            (item) {
-                              final itemStock = _stock.where((row) => row['item_id'] == item['id']).toList();
-                              if (itemStock.isEmpty) return null;
-                              final avgCost = _costs
-                                      .firstWhere(
-                                        (cost) => cost['item_id'] == item['id'],
-                                        orElse: () => {'avg_unit_cost': 0},
-                                      )['avg_unit_cost'] as num? ??
-                                  0;
-                              final totalQty = itemStock.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
-                              return DataRow(
-                                cells: [
-                                  DataCell(item['main_image_url'] == null
-                                      ? const Icon(Icons.image_not_supported)
-                                      : Image.network(item['main_image_url'], width: 40, height: 40, fit: BoxFit.cover)),
-                                  DataCell(Text(item['title'] ?? '')),
-                                  DataCell(
-                                    Wrap(
-                                      spacing: 8,
-                                      children: itemStock
-                                          .map((row) => Chip(label: Text('${row['size'] ?? 'OS'}: ${row['quantity']}')))
-                                          .toList(),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Image')),
+                          DataColumn(label: Text('Item')),
+                          DataColumn(label: Text('Sizes')),
+                          DataColumn(label: Text('Avg Cost')),
+                          DataColumn(label: Text('Total Qty')),
+                          DataColumn(label: Text('Available')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: _items
+                            .map(
+                              (item) {
+                                final itemStock = _stock.where((row) => row['item_id'] == item['id']).toList();
+                                if (itemStock.isEmpty) return null;
+                                final avgCost = _costs
+                                        .firstWhere(
+                                          (cost) => cost['item_id'] == item['id'],
+                                          orElse: () => {'avg_unit_cost': 0},
+                                        )['avg_unit_cost'] as num? ??
+                                    0;
+                                final totalQty = itemStock.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
+                                return DataRow(
+                                  cells: [
+                                    DataCell(item['main_image_url'] == null
+                                        ? const Icon(Icons.image_not_supported)
+                                        : Image.network(item['main_image_url'],
+                                            width: 40, height: 40, fit: BoxFit.cover)),
+                                    DataCell(Text(item['title'] ?? '')),
+                                    DataCell(
+                                      Wrap(
+                                        spacing: 8,
+                                        children: itemStock
+                                            .map((row) => Chip(label: Text('${row['size'] ?? 'OS'}: ${row['quantity']}')))
+                                            .toList(),
+                                      ),
                                     ),
-                                  ),
-                                  DataCell(Text(_currency(avgCost))),
-                                  DataCell(Text(totalQty.toString())),
-                                  DataCell(Text(totalQty.toString())),
-                                  DataCell(
-                                    TextButton(
-                                      onPressed: () => _openManageDialog(item['id'] as String),
-                                      child: const Text('Manage'),
+                                    DataCell(Text(_currency(avgCost))),
+                                    DataCell(Text(totalQty.toString())),
+                                    DataCell(Text(totalQty.toString())),
+                                    DataCell(
+                                      TextButton(
+                                        onPressed: () => _openManageDialog(item['id'] as String),
+                                        child: const Text('Manage'),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          )
-                          .whereType<DataRow>()
-                          .toList(),
+                                  ],
+                                );
+                              },
+                            )
+                            .whereType<DataRow>()
+                            .toList(),
+                      ),
                     ),
                   ),
                 ),

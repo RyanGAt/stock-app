@@ -292,49 +292,51 @@ class _ListingsScreenState extends State<ListingsScreen> {
               : SectionCard(
                   title: 'Listings',
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Item')),
-                        DataColumn(label: Text('Size')),
-                        DataColumn(label: Text('Platform')),
-                        DataColumn(label: Text('Status')),
-                        DataColumn(label: Text('Listed Price')),
-                        DataColumn(label: Text('Listed Date')),
-                        DataColumn(label: Text('Source URL')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: filteredListings
-                          .map(
-                            (listing) => DataRow(
-                              cells: [
-                                DataCell(Text(listing['items']?['title'] ?? '')),
-                                DataCell(Text(listing['size'] ?? '')),
-                                DataCell(Text(listing['platform'] ?? '')),
-                                DataCell(Text(listing['status'] ?? '')),
-                                DataCell(Text(_currency(listing['listed_price'] as num? ?? 0))),
-                                DataCell(Text(listing['listed_date'] ?? '')),
-                                DataCell(Text(listing['source_url'] ?? '')),
-                                DataCell(
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.sell),
-                                        onPressed: listing['status'] == 'Active'
-                                            ? () => _markAsSold(listing)
-                                            : null,
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit),
-                                        onPressed: () => _openListingDialog(listing: listing),
-                                      ),
-                                    ],
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Item')),
+                          DataColumn(label: Text('Size')),
+                          DataColumn(label: Text('Platform')),
+                          DataColumn(label: Text('Status')),
+                          DataColumn(label: Text('Listed Price')),
+                          DataColumn(label: Text('Listed Date')),
+                          DataColumn(label: Text('Source URL')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: filteredListings
+                            .map(
+                              (listing) => DataRow(
+                                cells: [
+                                  DataCell(Text(listing['items']?['title'] ?? '')),
+                                  DataCell(Text(listing['size'] ?? '')),
+                                  DataCell(Text(listing['platform'] ?? '')),
+                                  DataCell(Text(listing['status'] ?? '')),
+                                  DataCell(Text(_currency(listing['listed_price'] as num? ?? 0))),
+                                  DataCell(Text(listing['listed_date'] ?? '')),
+                                  DataCell(Text(listing['source_url'] ?? '')),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.sell),
+                                          onPressed: listing['status'] == 'Active'
+                                              ? () => _markAsSold(listing)
+                                              : null,
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () => _openListingDialog(listing: listing),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .toList(),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                      ),
                     ),
                   ),
                 ),

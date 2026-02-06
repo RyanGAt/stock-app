@@ -148,25 +148,30 @@ class _SalesTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DataTable(
-      columns: const [
-        DataColumn(label: Text('Item')),
-        DataColumn(label: Text('Platform')),
-        DataColumn(label: Text('Sale Price')),
-        DataColumn(label: Text('Sold Date')),
-      ],
-      rows: rows
-          .map(
-            (row) => DataRow(
-              cells: [
-                DataCell(Text(row['items']?['title'] ?? '')),
-                DataCell(Text(row['platform'] ?? '')),
-                DataCell(Text(_currency(row['sale_price'] as num? ?? 0))),
-                DataCell(Text(row['sold_date'] ?? '')),
-              ],
-            ),
-          )
-          .toList(),
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Item')),
+            DataColumn(label: Text('Platform')),
+            DataColumn(label: Text('Sale Price')),
+            DataColumn(label: Text('Sold Date')),
+          ],
+          rows: rows
+              .map(
+                (row) => DataRow(
+                  cells: [
+                    DataCell(Text(row['items']?['title'] ?? '')),
+                    DataCell(Text(row['platform'] ?? '')),
+                    DataCell(Text(_currency(row['sale_price'] as num? ?? 0))),
+                    DataCell(Text(row['sold_date'] ?? '')),
+                  ],
+                ),
+              )
+              .toList(),
+        ),
+      ),
     );
   }
 }
@@ -178,25 +183,30 @@ class _ListingsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DataTable(
-      columns: const [
-        DataColumn(label: Text('Item')),
-        DataColumn(label: Text('Platform')),
-        DataColumn(label: Text('Listed Price')),
-        DataColumn(label: Text('Listed Date')),
-      ],
-      rows: rows
-          .map(
-            (row) => DataRow(
-              cells: [
-                DataCell(Text(row['items']?['title'] ?? '')),
-                DataCell(Text(row['platform'] ?? '')),
-                DataCell(Text(_currency(row['listed_price'] as num? ?? 0))),
-                DataCell(Text(row['listed_date'] ?? '')),
-              ],
-            ),
-          )
-          .toList(),
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Item')),
+            DataColumn(label: Text('Platform')),
+            DataColumn(label: Text('Listed Price')),
+            DataColumn(label: Text('Listed Date')),
+          ],
+          rows: rows
+              .map(
+                (row) => DataRow(
+                  cells: [
+                    DataCell(Text(row['items']?['title'] ?? '')),
+                    DataCell(Text(row['platform'] ?? '')),
+                    DataCell(Text(_currency(row['listed_price'] as num? ?? 0))),
+                    DataCell(Text(row['listed_date'] ?? '')),
+                  ],
+                ),
+              )
+              .toList(),
+        ),
+      ),
     );
   }
 }
