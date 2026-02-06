@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -75,12 +77,20 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
         builder: (context, setModalState) => AlertDialog(
           title: Text(purchase == null ? 'Add Purchase' : 'Edit Purchase'),
           insetPadding: const EdgeInsets.all(24),
-          content: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 560, maxWidth: 720),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+          content: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                  ? constraints.maxWidth
+                  : 720.0;
+              final maxDialogWidth = math.min(availableWidth, 720.0);
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxDialogWidth),
+                  child: SizedBox(
+                    width: maxDialogWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                   TextField(
                     controller: totalPriceController,
                     decoration: const InputDecoration(labelText: 'Total Price'),
@@ -276,9 +286,12 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
                             ),
                           ),
                   ),
-                ],
-              ),
-            ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
