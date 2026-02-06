@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/item_purchase.dart';
+
 class SupabaseService {
   SupabaseService(this.client);
 
@@ -90,6 +92,10 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> fetchPurchaseOrders(String userId) async {
+    return fetchPurchases(userId);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPurchases(String userId) async {
     final response = await client
         .from('purchases')
         .select()
@@ -99,6 +105,10 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> createPurchaseOrder(Map<String, dynamic> data) async {
+    return createPurchase(data);
+  }
+
+  Future<Map<String, dynamic>> createPurchase(Map<String, dynamic> data) async {
     final response = await client.from('purchases').insert(data).select().single();
     return Map<String, dynamic>.from(response);
   }
@@ -120,8 +130,21 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  Future<List<ItemPurchase>> fetchItemPurchases(String userId) async {
+    final response = await client
+        .from('purchase_details')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response).map(ItemPurchase.fromMap).toList();
+  }
+
   Future<void> createPurchaseDetail(Map<String, dynamic> data) async {
     await client.from('purchase_details').insert(data);
+  }
+
+  Future<void> createItemPurchase(ItemPurchase purchase) async {
+    await client.from('purchase_details').insert(purchase.toMap());
   }
 
   Future<void> updatePurchaseDetail(String id, Map<String, dynamic> data) async {
