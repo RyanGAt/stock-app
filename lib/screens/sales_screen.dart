@@ -203,6 +203,14 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredSales = _filteredSales();
+    final platforms = [
+      'All',
+      ..._sales
+          .map((row) => row['platform'])
+          .whereType<String>()
+          .where((platform) => platform.isNotEmpty)
+          .toSet(),
+    ];
     final totalRevenue = filteredSales.fold<num>(
       0,
       (sum, row) => sum + (row['sale_price'] as num? ?? 0),
@@ -254,8 +262,13 @@ class _SalesScreenState extends State<SalesScreen> {
           children: [
             DropdownButton<String>(
               value: _platformFilter,
-              items: ['All', ..._sales.map((row) => row['platform'] ?? '').where((p) => p != '').toSet()]
-                  .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+              items: platforms
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) => setState(() => _platformFilter = value ?? 'All'),
             ),
