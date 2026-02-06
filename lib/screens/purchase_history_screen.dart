@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/item_purchase.dart';
 import '../services/supabase_service.dart';
 import '../widgets/scrollable_data_table.dart';
 import '../widgets/section_card.dart';
@@ -35,7 +36,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     if (userId == null) return;
     setState(() => _loading = true);
     final results = await Future.wait([
-      _service.fetchPurchaseOrders(userId),
+      _service.fetchPurchases(userId),
       _service.fetchPurchaseDetails(userId),
       _service.fetchItems(userId),
     ]);
@@ -272,36 +273,46 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     };
 
     if (purchase == null) {
-      final createdPurchase = await _service.createPurchaseOrder(payload);
+      final createdPurchase = await _service.createPurchase(payload);
       final purchaseId = createdPurchase['id'] as String?;
       if (purchaseId != null) {
         for (final detail in draftDetails) {
-          await _service.createPurchaseDetail({
-            'purchase_id': purchaseId,
-            'item_id': detail['item_id'],
-            'user_id': userId,
-            'quantity': detail['quantity'] as int? ?? 1,
-            'unit_price': detail['unit_price'] as num? ?? 0,
-            'size': detail['size'],
-          });
+          await _service.createItemPurchase(
+            ItemPurchase(
+              id: '',
+              purchaseId: purchaseId,
+              itemId: detail['item_id'] as String,
+              userId: userId,
+              quantity: detail['quantity'] as int? ?? 1,
+              unitPrice: detail['unit_price'] as num? ?? 0,
+              createdAt: DateTime.now(),
+              addedToStock: false,
+              size: detail['size'] as String?,
+            ),
+          );
         }
       }
     } else {
       final purchaseId = purchase['id'] as String;
-      await _service.updatePurchaseOrder(purchase['id'] as String, payload);
+      await _service.updatePurchase(purchase['id'] as String, payload);
       for (final id in deletedDetailIds) {
         await _service.deletePurchaseDetail(id);
       }
       for (final detail in draftDetails) {
         if (detail['id'] != null) continue;
-        await _service.createPurchaseDetail({
-          'purchase_id': purchaseId,
-          'item_id': detail['item_id'],
-          'user_id': userId,
-          'quantity': detail['quantity'] as int? ?? 1,
-          'unit_price': detail['unit_price'] as num? ?? 0,
-          'size': detail['size'],
-        });
+        await _service.createItemPurchase(
+          ItemPurchase(
+            id: '',
+            purchaseId: purchaseId,
+            itemId: detail['item_id'] as String,
+            userId: userId,
+            quantity: detail['quantity'] as int? ?? 1,
+            unitPrice: detail['unit_price'] as num? ?? 0,
+            createdAt: DateTime.now(),
+            addedToStock: false,
+            size: detail['size'] as String?,
+          ),
+        );
       }
     }
     await _load();
@@ -390,7 +401,19 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     };
 
     if (detail == null) {
-      await _service.createPurchaseDetail(payload);
+      await _service.createItemPurchase(
+        ItemPurchase(
+          id: '',
+          purchaseId: selectedPurchaseId,
+          itemId: selectedItemId,
+          userId: userId,
+          quantity: int.tryParse(qtyController.text) ?? 1,
+          unitPrice: num.tryParse(priceController.text) ?? 0,
+          createdAt: DateTime.now(),
+          addedToStock: false,
+          size: sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
+        ),
+      );
     } else {
       await _service.updatePurchaseDetail(detail['id'] as String, payload);
     }
@@ -411,7 +434,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   }
 
   Future<void> _deletePurchaseOrder(String id) async {
-    await _service.deletePurchaseOrder(id);
+    await _service.deletePurchase(id);
     await _load();
   }
 
