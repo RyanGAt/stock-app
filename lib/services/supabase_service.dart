@@ -152,7 +152,11 @@ class SupabaseService {
   }
 
   Future<void> createItemPurchase(ItemPurchase purchase) async {
-    await client.from('purchase_details').insert(purchase.toMap());
+    final payload = Map<String, dynamic>.from(purchase.toMap());
+    if (payload['id'] == '') {
+      payload.remove('id');
+    }
+    await client.from('purchase_details').insert(payload);
   }
 
   Future<void> updatePurchaseDetail(String id, Map<String, dynamic> data) async {
