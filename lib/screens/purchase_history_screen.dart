@@ -77,20 +77,12 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
         builder: (context, setModalState) => AlertDialog(
           title: Text(purchase == null ? 'Add Purchase' : 'Edit Purchase'),
           insetPadding: const EdgeInsets.all(24),
-          content: LayoutBuilder(
-            builder: (context, constraints) {
-              final availableWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
-                  ? constraints.maxWidth
-                  : 720.0;
-              final maxDialogWidth = math.min(availableWidth, 720.0);
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxDialogWidth),
-                  child: SizedBox(
-                    width: maxDialogWidth,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+          content: SizedBox(
+            width: math.min(math.max(MediaQuery.of(context).size.width - 48, 320.0), 720.0),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   TextField(
                     controller: totalPriceController,
                     decoration: const InputDecoration(labelText: 'Total Price'),
@@ -286,12 +278,9 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
                             ),
                           ),
                   ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+                ],
+              ),
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
