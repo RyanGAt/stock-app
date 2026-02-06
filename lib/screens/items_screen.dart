@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/supabase_service.dart';
+import '../widgets/scrollable_data_table.dart';
 import '../widgets/section_card.dart';
 
 class ItemsScreen extends StatefulWidget {
@@ -161,59 +162,54 @@ class _ItemsScreenState extends State<ItemsScreen> {
               ? const Center(child: CircularProgressIndicator())
               : SectionCard(
                   title: 'Items',
-                  child: SingleChildScrollView(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Title')),
-                          DataColumn(label: Text('Brand')),
-                          DataColumn(label: Text('Category')),
-                          DataColumn(label: Text('Size')),
-                          DataColumn(label: Text('Colour')),
-                          DataColumn(label: Text('Created At')),
-                          DataColumn(label: Text('Buy / View')),
-                          DataColumn(label: Text('Actions')),
-                        ],
-                        rows: filteredItems
-                            .map(
-                              (item) => DataRow(
-                                cells: [
-                                  DataCell(Text(item['title'] ?? '')),
-                                  DataCell(Text(item['brand'] ?? '')),
-                                  DataCell(Text(item['category'] ?? '')),
-                                  DataCell(Text(item['size'] ?? '')),
-                                  DataCell(Text(item['colour'] ?? '')),
-                                  DataCell(Text(DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)))),
-                                  DataCell(
-                                    TextButton(
-                                      onPressed: _listingUrlForItem(item['id'] as String) == null
-                                          ? null
-                                          : () => _openListing(_listingUrlForItem(item['id'] as String)!),
-                                      child: Text(_listingUrlForItem(item['id'] as String) == null
-                                          ? '—'
-                                          : 'View listing'),
-                                    ),
+                  child: ScrollableDataTable(
+                    table: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Title')),
+                        DataColumn(label: Text('Brand')),
+                        DataColumn(label: Text('Category')),
+                        DataColumn(label: Text('Size')),
+                        DataColumn(label: Text('Colour')),
+                        DataColumn(label: Text('Created At')),
+                        DataColumn(label: Text('Buy / View')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      rows: filteredItems
+                          .map(
+                            (item) => DataRow(
+                              cells: [
+                                DataCell(Text(item['title'] ?? '')),
+                                DataCell(Text(item['brand'] ?? '')),
+                                DataCell(Text(item['category'] ?? '')),
+                                DataCell(Text(item['size'] ?? '')),
+                                DataCell(Text(item['colour'] ?? '')),
+                                DataCell(Text(DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)))),
+                                DataCell(
+                                  TextButton(
+                                    onPressed: _listingUrlForItem(item['id'] as String) == null
+                                        ? null
+                                        : () => _openListing(_listingUrlForItem(item['id'] as String)!),
+                                    child: Text(_listingUrlForItem(item['id'] as String) == null ? '—' : 'View listing'),
                                   ),
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit),
-                                          onPressed: () => _openItemDialog(item: item),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete),
-                                          onPressed: () => _deleteItem(item['id'] as String),
-                                        ),
-                                      ],
-                                    ),
+                                ),
+                                DataCell(
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        onPressed: () => _openItemDialog(item: item),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () => _deleteItem(item['id'] as String),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            )
-                            .toList(),
-                      ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                 ),

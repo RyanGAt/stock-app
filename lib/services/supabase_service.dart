@@ -98,8 +98,9 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<void> createPurchaseOrder(Map<String, dynamic> data) async {
-    await client.from('purchases').insert(data);
+  Future<Map<String, dynamic>> createPurchaseOrder(Map<String, dynamic> data) async {
+    final response = await client.from('purchases').insert(data).select().single();
+    return Map<String, dynamic>.from(response);
   }
 
   Future<void> updatePurchaseOrder(String id, Map<String, dynamic> data) async {

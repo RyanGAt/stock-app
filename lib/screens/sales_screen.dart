@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_service.dart';
+import '../widgets/scrollable_data_table.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stat_card.dart';
 
@@ -288,68 +289,65 @@ class _SalesScreenState extends State<SalesScreen> {
               ? const Center(child: CircularProgressIndicator())
               : SectionCard(
                   title: 'Sales',
-                  child: SingleChildScrollView(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Item')),
-                          DataColumn(label: Text('Size')),
-                          DataColumn(label: Text('Platform')),
-                          DataColumn(label: Text('Sale Price')),
-                          DataColumn(label: Text('Fees')),
-                          DataColumn(label: Text('Shipping')),
-                          DataColumn(label: Text('Sold Date')),
-                          DataColumn(label: Text('Profit')),
-                          DataColumn(label: Text('Actions')),
-                        ],
-                        rows: filteredSales
-                            .map(
-                              (sale) {
-                                final item = _items.firstWhere(
-                                  (item) => item['id'] == sale['item_id'],
-                                  orElse: () => {},
-                                );
-                                final avgCost = _costs
-                                        .firstWhere(
-                                          (cost) => cost['item_id'] == sale['item_id'],
-                                          orElse: () => {'avg_unit_cost': 0},
-                                        )['avg_unit_cost'] as num? ??
-                                    0;
-                                final profit = (sale['sale_price'] as num? ?? 0) -
-                                    (sale['fees'] as num? ?? 0) -
-                                    (sale['shipping_cost'] as num? ?? 0) -
-                                    avgCost;
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text(item['title'] ?? '')),
-                                    DataCell(Text(sale['size'] ?? '')),
-                                    DataCell(Text(sale['platform'] ?? '')),
-                                    DataCell(Text(_currency(sale['sale_price'] as num? ?? 0))),
-                                    DataCell(Text(_currency(sale['fees'] as num? ?? 0))),
-                                    DataCell(Text(_currency(sale['shipping_cost'] as num? ?? 0))),
-                                    DataCell(Text(sale['sold_date'] ?? '')),
-                                    DataCell(Text(_currency(profit))),
-                                    DataCell(
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit),
-                                            onPressed: () => _openSaleDialog(sale: sale),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete),
-                                            onPressed: () => _deleteSale(sale['id'] as String),
-                                          ),
-                                        ],
-                                      ),
+                  child: ScrollableDataTable(
+                    table: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Item')),
+                        DataColumn(label: Text('Size')),
+                        DataColumn(label: Text('Platform')),
+                        DataColumn(label: Text('Sale Price')),
+                        DataColumn(label: Text('Fees')),
+                        DataColumn(label: Text('Shipping')),
+                        DataColumn(label: Text('Sold Date')),
+                        DataColumn(label: Text('Profit')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      rows: filteredSales
+                          .map(
+                            (sale) {
+                              final item = _items.firstWhere(
+                                (item) => item['id'] == sale['item_id'],
+                                orElse: () => {},
+                              );
+                              final avgCost = _costs
+                                      .firstWhere(
+                                        (cost) => cost['item_id'] == sale['item_id'],
+                                        orElse: () => {'avg_unit_cost': 0},
+                                      )['avg_unit_cost'] as num? ??
+                                  0;
+                              final profit = (sale['sale_price'] as num? ?? 0) -
+                                  (sale['fees'] as num? ?? 0) -
+                                  (sale['shipping_cost'] as num? ?? 0) -
+                                  avgCost;
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text(item['title'] ?? '')),
+                                  DataCell(Text(sale['size'] ?? '')),
+                                  DataCell(Text(sale['platform'] ?? '')),
+                                  DataCell(Text(_currency(sale['sale_price'] as num? ?? 0))),
+                                  DataCell(Text(_currency(sale['fees'] as num? ?? 0))),
+                                  DataCell(Text(_currency(sale['shipping_cost'] as num? ?? 0))),
+                                  DataCell(Text(sale['sold_date'] ?? '')),
+                                  DataCell(Text(_currency(profit))),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () => _openSaleDialog(sale: sale),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          onPressed: () => _deleteSale(sale['id'] as String),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                );
-                              },
-                            )
-                            .toList(),
-                      ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )
+                          .toList(),
                     ),
                   ),
                 ),
