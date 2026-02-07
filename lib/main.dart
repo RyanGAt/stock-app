@@ -43,12 +43,40 @@ class StockApp extends StatelessWidget {
           headingRowColor: WidgetStatePropertyAll(Color(0xFFF1F5F9)),
           dataRowColor: WidgetStatePropertyAll(Colors.white),
           dividerThickness: 0.5,
+          headingRowHeight: 44,
+          dataRowMinHeight: 48,
+          dataRowMaxHeight: 64,
+          horizontalMargin: 20,
+          columnSpacing: 20,
+          headingTextStyle: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF475569),
+            letterSpacing: 0.3,
+          ),
+          dataTextStyle: TextStyle(
+            fontSize: 13,
+            color: Color(0xFF0F172A),
+          ),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFFF8FAFC),
           foregroundColor: Color(0xFF0F172A),
           elevation: 0,
           centerTitle: false,
+        ),
+        dialogTheme: DialogTheme(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titleTextStyle: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0F172A),
+          ),
+          contentTextStyle: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF475569),
+          ),
         ),
         textTheme: const TextTheme(
           headlineMedium: TextStyle(
