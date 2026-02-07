@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Sign in to manage listings and track profits.',
+                  'Sign in to manage stock and track profits.',
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),

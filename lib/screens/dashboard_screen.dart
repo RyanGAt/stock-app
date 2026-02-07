@@ -26,8 +26,9 @@ class DashboardScreen extends StatelessWidget {
         final data = snapshot.data!;
         final revenueByMonth = _revenueByMonth(data.sales, months: 6);
         final profitByMonth = _profitByMonth(data.sales, data.itemCosts, months: 6);
-        final activeListingRatio =
-            data.totalSales == 0 && data.activeListings == 0 ? 0.0 : data.activeListings / (data.totalSales + data.activeListings);
+        final stockRatio = data.stockUnits == 0 && data.totalSales == 0
+            ? 0.0
+            : data.stockUnits / (data.stockUnits + data.totalSales);
         return SingleChildScrollView(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -49,8 +50,8 @@ class DashboardScreen extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       StatCard(label: 'Total Items', value: data.totalItems.toString()),
-                      StatCard(label: 'Active Listings', value: data.activeListings.toString()),
                       StatCard(label: 'Total Sales', value: data.totalSales.toString()),
+                      StatCard(label: 'Units In Stock', value: data.stockUnits.toString()),
                       StatCard(label: 'Inventory Cost', value: _currency(data.inventoryCost)),
                       StatCard(label: 'Total Revenue', value: _currency(data.totalRevenue)),
                       StatCard(label: 'Total Profit', value: _currency(data.totalProfit)),
@@ -71,10 +72,10 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         SectionCard(
-                          title: 'Listings health',
-                          child: _ListingsHealth(
-                            activeRatio: activeListingRatio,
-                            activeCount: data.activeListings,
+                          title: 'Stock health',
+                          child: _StockHealth(
+                            stockRatio: stockRatio,
+                            stockCount: data.stockUnits,
                             soldCount: data.totalSales,
                           ),
                         ),
@@ -100,10 +101,10 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: SectionCard(
-                            title: 'Listings health',
-                            child: _ListingsHealth(
-                              activeRatio: activeListingRatio,
-                              activeCount: data.activeListings,
+                            title: 'Stock health',
+                            child: _StockHealth(
+                              stockRatio: stockRatio,
+                              stockCount: data.stockUnits,
                               soldCount: data.totalSales,
                             ),
                           ),
@@ -120,8 +121,8 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         SectionCard(
-                          title: 'Active Listings',
-                          child: _ListingsTable(rows: data.activeListingRows),
+                          title: 'Stock on hand',
+                          child: _StockTable(rows: data.stockRows),
                         ),
                       ],
                     )
@@ -138,8 +139,8 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: SectionCard(
-                            title: 'Active Listings',
-                            child: _ListingsTable(rows: data.activeListingRows),
+                            title: 'Stock on hand',
+                            child: _StockTable(rows: data.stockRows),
                           ),
                         ),
                       ],
@@ -158,11 +159,11 @@ String _currency(num value) => NumberFormat.currency(symbol: '£').format(value)
 
 Future<DashboardData> _loadDashboard(SupabaseService service, String userId) async {
   final items = await service.fetchItems(userId);
-  final listings = await service.fetchListings(userId);
   final sales = await service.fetchSales(userId);
   final itemCosts = await service.fetchItemCosts(userId);
+  final stock = await service.fetchItemStock(userId);
 
-  final activeListings = listings.where((listing) => listing['status'] == 'Active').toList();
+  final stockUnits = stock.fold<int>(0, (sum, row) => sum + (row['quantity'] as int? ?? 0));
   final totalRevenue = sales.fold<num>(
     0,
     (sum, row) => sum + (row['sale_price'] as num? ?? 0),
@@ -188,45 +189,42 @@ Future<DashboardData> _loadDashboard(SupabaseService service, String userId) asy
 
   return DashboardData(
     totalItems: items.length,
-    activeListings: activeListings.length,
     totalSales: sales.length,
+    stockUnits: stockUnits,
     totalRevenue: totalRevenue,
     totalProfit: totalProfit,
     inventoryCost: inventoryCost,
     recentSales: sales.take(5).toList(),
-    activeListingRows: activeListings.take(5).toList(),
     sales: sales,
-    listings: listings,
     itemCosts: itemCosts,
+    stockRows: stock.take(5).toList(),
   );
 }
 
 class DashboardData {
   DashboardData({
     required this.totalItems,
-    required this.activeListings,
     required this.totalSales,
+    required this.stockUnits,
     required this.totalRevenue,
     required this.totalProfit,
     required this.inventoryCost,
     required this.recentSales,
-    required this.activeListingRows,
     required this.sales,
-    required this.listings,
     required this.itemCosts,
+    required this.stockRows,
   });
 
   final int totalItems;
-  final int activeListings;
   final int totalSales;
+  final int stockUnits;
   final num totalRevenue;
   final num totalProfit;
   final num inventoryCost;
   final List<Map<String, dynamic>> recentSales;
-  final List<Map<String, dynamic>> activeListingRows;
   final List<Map<String, dynamic>> sales;
-  final List<Map<String, dynamic>> listings;
   final List<Map<String, dynamic>> itemCosts;
+  final List<Map<String, dynamic>> stockRows;
 }
 
 List<_ChartPoint> _revenueByMonth(List<Map<String, dynamic>> sales, {int months = 6}) {
@@ -447,15 +445,15 @@ class _LineChartPainter extends CustomPainter {
   }
 }
 
-class _ListingsHealth extends StatelessWidget {
-  const _ListingsHealth({
-    required this.activeRatio,
-    required this.activeCount,
+class _StockHealth extends StatelessWidget {
+  const _StockHealth({
+    required this.stockRatio,
+    required this.stockCount,
     required this.soldCount,
   });
 
-  final double activeRatio;
-  final int activeCount;
+  final double stockRatio;
+  final int stockCount;
   final int soldCount;
 
   @override
@@ -464,13 +462,10 @@ class _ListingsHealth extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Active vs Sold',
-          style: theme.textTheme.titleMedium,
-        ),
+        Text('Stock vs Sold', style: theme.textTheme.titleMedium),
         const SizedBox(height: 12),
         LinearProgressIndicator(
-          value: activeRatio,
+          value: stockRatio,
           minHeight: 10,
           borderRadius: BorderRadius.circular(8),
           backgroundColor: const Color(0xFFE2E8F0),
@@ -478,7 +473,7 @@ class _ListingsHealth extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            _HealthPill(label: 'Active', value: activeCount.toString(), color: theme.colorScheme.primary),
+            _HealthPill(label: 'In stock', value: stockCount.toString(), color: theme.colorScheme.primary),
             const SizedBox(width: 12),
             _HealthPill(label: 'Sold', value: soldCount.toString(), color: const Color(0xFF94A3B8)),
           ],
@@ -555,8 +550,8 @@ class _SalesTable extends StatelessWidget {
   }
 }
 
-class _ListingsTable extends StatelessWidget {
-  const _ListingsTable({required this.rows});
+class _StockTable extends StatelessWidget {
+  const _StockTable({required this.rows});
 
   final List<Map<String, dynamic>> rows;
 
@@ -566,18 +561,18 @@ class _ListingsTable extends StatelessWidget {
       table: DataTable(
         columns: const [
           DataColumn(label: Text('Item')),
-          DataColumn(label: Text('Platform')),
-          DataColumn(label: Text('Listed Price')),
-          DataColumn(label: Text('Listed Date')),
+          DataColumn(label: Text('Size')),
+          DataColumn(label: Text('Quantity')),
+          DataColumn(label: Text('Last Updated')),
         ],
         rows: rows
             .map(
               (row) => DataRow(
                 cells: [
                   DataCell(Text(row['items']?['title'] ?? '')),
-                  DataCell(Text(row['platform'] ?? '')),
-                  DataCell(Text(_currency(row['listed_price'] as num? ?? 0))),
-                  DataCell(Text(row['listed_date'] ?? '')),
+                  DataCell(Text(row['size'] ?? 'OS')),
+                  DataCell(Text('${row['quantity'] ?? 0}')),
+                  DataCell(Text(row['updated_at'] ?? '')),
                 ],
               ),
             )

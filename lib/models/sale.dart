@@ -7,7 +7,6 @@ class Sale {
     this.itemId,
     this.size,
     this.platform,
-    this.listingId,
     this.salePrice,
     this.fees,
     this.shippingCost,
@@ -21,7 +20,6 @@ class Sale {
   final String? itemId;
   final String? size;
   final String? platform;
-  final String? listingId;
   final num? salePrice;
   final num? fees;
   final num? shippingCost;
@@ -36,7 +34,6 @@ class Sale {
       itemId: map['item_id'] as String?,
       size: map['size'] as String?,
       platform: map['platform'] as String?,
-      listingId: map['listing_id'] as String?,
       salePrice: map['sale_price'] as num?,
       fees: map['fees'] as num?,
       shippingCost: map['shipping_cost'] as num?,
@@ -55,7 +52,6 @@ class Sale {
       'item_id': itemId,
       'size': size,
       'platform': platform,
-      'listing_id': listingId,
       'sale_price': salePrice,
       'fees': fees,
       'shipping_cost': shippingCost,

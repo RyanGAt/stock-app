@@ -6,8 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../screens/dashboard_screen.dart';
 import '../screens/items_screen.dart';
-import '../screens/listing_generator_screen.dart';
-import '../screens/listings_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/purchase_history_screen.dart';
 import '../screens/sales_screen.dart';
@@ -56,14 +54,6 @@ GoRouter buildRouter() {
           GoRoute(
             path: '/sales',
             builder: (context, state) => const SalesScreen(),
-          ),
-          GoRoute(
-            path: '/listings',
-            builder: (context, state) => const ListingsScreen(),
-          ),
-          GoRoute(
-            path: '/listing-generator',
-            builder: (context, state) => const ListingGeneratorScreen(),
           ),
         ],
       ),

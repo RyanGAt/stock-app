@@ -59,7 +59,7 @@ class _TopBar extends StatelessWidget {
               Text('Inventory Workspace', style: theme.textTheme.titleLarge),
               const SizedBox(height: 2),
               Text(
-                'Track listings, stock, and sales in one place.',
+                'Track stock, purchases, and sales in one place.',
                 style: theme.textTheme.bodySmall,
               ),
             ],
