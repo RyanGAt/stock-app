@@ -424,8 +424,10 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
     try {
+      final sizeValue = (detail['size'] as String?)?.trim();
+      final normalizedSize = sizeValue == null || sizeValue.isEmpty ? 'OS' : sizeValue;
       final existing = _stock.firstWhere(
-        (row) => row['item_id'] == detail['item_id'] && row['size'] == detail['size'],
+        (row) => row['item_id'] == detail['item_id'] && (row['size'] ?? 'OS') == normalizedSize,
         orElse: () => {},
       );
       final existingQuantity = existing['quantity'] as int? ?? 0;
@@ -435,13 +437,13 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
         'item_id': detail['item_id'],
         'user_id': userId,
         'quantity': newQuantity,
-        'size': detail['size'],
+        'size': normalizedSize,
       });
       await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
       await _load();
       _showToast('Added to stock.');
     } catch (error) {
-      _showToast('Unable to add to stock.');
+      _showToast('Unable to add to stock: $error');
     }
   }
 
