@@ -22,6 +22,8 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   List<Map<String, dynamic>> _purchaseOrders = [];
   List<Map<String, dynamic>> _purchaseDetails = [];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _stock = [];
+  String? _selectedPurchaseId;
 
   @override
   void initState() {
@@ -38,11 +40,18 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       _service.fetchPurchases(userId),
       _service.fetchPurchaseDetails(userId),
       _service.fetchItems(userId),
+      _service.fetchItemStock(userId),
     ]);
     setState(() {
       _purchaseOrders = results[0];
       _purchaseDetails = results[1];
       _items = results[2];
+      _stock = results[3];
+      _selectedPurchaseId ??= _purchaseOrders.firstOrNull?['id'] as String?;
+      if (_selectedPurchaseId != null &&
+          !_purchaseOrders.any((purchase) => purchase['id'] == _selectedPurchaseId)) {
+        _selectedPurchaseId = _purchaseOrders.firstOrNull?['id'] as String?;
+      }
       _loading = false;
     });
   }
@@ -287,6 +296,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
           });
         }
       }
+      _showToast('Purchase added.');
     } else {
       final purchaseId = purchase['id'] as String;
       await _service.updatePurchase(purchase['id'] as String, payload);
@@ -305,6 +315,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
           'added_to_stock': false,
         });
       }
+      _showToast('Purchase updated.');
     }
     await _load();
     detailQtyController.dispose();
@@ -401,8 +412,10 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
         'size': sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
         'added_to_stock': false,
       });
+      _showToast('Purchase item added.');
     } else {
       await _service.updatePurchaseDetail(detail['id'] as String, payload);
+      _showToast('Purchase item updated.');
     }
     await _load();
   }
@@ -410,24 +423,46 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   Future<void> _addToStock(Map<String, dynamic> detail) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    await _service.upsertItemStock({
-      'item_id': detail['item_id'],
-      'user_id': userId,
-      'quantity': detail['quantity'],
-      'size': detail['size'],
-    });
-    await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
-    await _load();
+    try {
+      final sizeValue = (detail['size'] as String?)?.trim();
+      final normalizedSize = sizeValue == null || sizeValue.isEmpty ? 'OS' : sizeValue;
+      final existing = _stock.firstWhere(
+        (row) => row['item_id'] == detail['item_id'] && (row['size'] ?? 'OS') == normalizedSize,
+        orElse: () => {},
+      );
+      final existingQuantity = existing['quantity'] as int? ?? 0;
+      final addQuantity = detail['quantity'] as int? ?? 0;
+      final newQuantity = existingQuantity + addQuantity;
+      if (existing.isNotEmpty) {
+        await _service.updateItemStock(existing['id'] as String, {
+          'quantity': newQuantity,
+        });
+      } else {
+        await _service.createItemStock({
+          'item_id': detail['item_id'],
+          'user_id': userId,
+          'quantity': newQuantity,
+          'size': normalizedSize,
+        });
+      }
+      await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
+      await _load();
+      _showToast('Added to stock.');
+    } catch (error) {
+      _showToast('Unable to add to stock: $error');
+    }
   }
 
   Future<void> _deletePurchaseOrder(String id) async {
     await _service.deletePurchase(id);
     await _load();
+    _showToast('Purchase deleted.');
   }
 
   Future<void> _deletePurchaseDetail(String id) async {
     await _service.deletePurchaseDetail(id);
     await _load();
+    _showToast('Purchase item deleted.');
   }
 
   num _calculateTotal(Iterable<Map<String, dynamic>> details) {
@@ -450,6 +485,12 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     return '$formattedDate • ${_currency(totalPrice)}';
   }
 
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalSpend = _purchaseDetails.fold<num>(
@@ -459,6 +500,12 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     final totalUnits = _purchaseDetails.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
     final avgCost = totalUnits == 0 ? 0 : totalSpend / totalUnits;
     final distinctItems = _purchaseDetails.map((row) => row['item_id']).toSet().length;
+
+    final selectedDetails = _selectedPurchaseId == null
+        ? <Map<String, dynamic>>[]
+        : _purchaseDetails
+            .where((row) => row['purchase_id'] == _selectedPurchaseId)
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,104 +551,107 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final maxHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 600.0;
-                      final tableHeight = (maxHeight - 24) / 2;
-                      return Column(
-                        children: [
-                          SizedBox(
-                            height: tableHeight,
-                            child: ScrollableDataTable(
-                              table: DataTable(
-                                columns: const [
-                                  DataColumn(label: Text('Total Price')),
-                                  DataColumn(label: Text('Bought Date')),
-                                  DataColumn(label: Text('Actions')),
-                                ],
-                                rows: _purchaseOrders
-                                    .map(
-                                      (purchase) => DataRow(
-                                        cells: [
-                                          DataCell(Text(_currency(
-                                              _purchaseTotal(purchase['id'] as String? ?? '')))),
-                                          DataCell(Text(purchase['bought_date'] ?? '')),
-                                          DataCell(
-                                            Row(
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit),
-                                                  onPressed: () => _openPurchaseOrderDialog(purchase: purchase),
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete),
-                                                  onPressed: () => _deletePurchaseOrder(purchase['id'] as String),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            height: tableHeight,
-                            child: ScrollableDataTable(
-                              table: DataTable(
-                                columns: const [
-                                  DataColumn(label: Text('Purchase')),
-                                  DataColumn(label: Text('Item')),
-                                  DataColumn(label: Text('Brand')),
-                                  DataColumn(label: Text('Size')),
-                                  DataColumn(label: Text('Qty')),
-                                  DataColumn(label: Text('Unit Price')),
-                                  DataColumn(label: Text('Line Total')),
-                                  DataColumn(label: Text('Stock')),
-                                  DataColumn(label: Text('Actions')),
-                                ],
-                                rows: _purchaseDetails
-                                    .map(
-                                      (detail) => DataRow(
-                                        cells: [
-                                          DataCell(Text(_purchaseLabel(detail['purchases']))),
-                                          DataCell(Text(detail['items']?['title'] ?? '')),
-                                          DataCell(Text(detail['items']?['brand'] ?? '')),
-                                          DataCell(Text(detail['size'] ?? '')),
-                                          DataCell(Text('${detail['quantity']}')),
-                                          DataCell(Text(_currency(detail['unit_price'] as num))),
-                                          DataCell(Text(_currency(
-                                              (detail['unit_price'] as num) * (detail['quantity'] as int)))),
-                                          DataCell(
-                                            detail['added_to_stock'] == true
-                                                ? const Text('Added')
-                                                : TextButton(
-                                                    onPressed: () => _addToStock(detail),
-                                                    child: const Text('Add to stock'),
+                      return SizedBox(
+                        height: maxHeight,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ScrollableDataTable(
+                                table: DataTable(
+                                  columns: const [
+                                    DataColumn(label: Text('Total Price')),
+                                    DataColumn(label: Text('Bought Date')),
+                                    DataColumn(label: Text('Actions')),
+                                  ],
+                                  rows: _purchaseOrders
+                                      .map(
+                                        (purchase) => DataRow(
+                                          selected: purchase['id'] == _selectedPurchaseId,
+                                          onSelectChanged: (_) =>
+                                              setState(() => _selectedPurchaseId = purchase['id'] as String?),
+                                          cells: [
+                                            DataCell(Text(_currency(
+                                                _purchaseTotal(purchase['id'] as String? ?? '')))),
+                                            DataCell(Text(purchase['bought_date'] ?? '')),
+                                            DataCell(
+                                              Row(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit),
+                                                    onPressed: () => _openPurchaseOrderDialog(purchase: purchase),
                                                   ),
-                                          ),
-                                          DataCell(
-                                            Row(
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit),
-                                                  onPressed: () => _openPurchaseDetailDialog(detail: detail),
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete),
-                                                  onPressed: () => _deletePurchaseDetail(detail['id'] as String),
-                                                ),
-                                              ],
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete),
+                                                    onPressed: () => _deletePurchaseOrder(purchase['id'] as String),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                    .toList(),
+                                          ],
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: ScrollableDataTable(
+                                table: DataTable(
+                                  columns: const [
+                                    DataColumn(label: Text('Purchase')),
+                                    DataColumn(label: Text('Item')),
+                                    DataColumn(label: Text('Brand')),
+                                    DataColumn(label: Text('Size')),
+                                    DataColumn(label: Text('Qty')),
+                                    DataColumn(label: Text('Unit Price')),
+                                    DataColumn(label: Text('Line Total')),
+                                    DataColumn(label: Text('Stock')),
+                                    DataColumn(label: Text('Actions')),
+                                  ],
+                                  rows: selectedDetails
+                                      .map(
+                                        (detail) => DataRow(
+                                          cells: [
+                                            DataCell(Text(_purchaseLabel(detail['purchases']))),
+                                            DataCell(Text(detail['items']?['title'] ?? '')),
+                                            DataCell(Text(detail['items']?['brand'] ?? '')),
+                                            DataCell(Text(detail['size'] ?? '')),
+                                            DataCell(Text('${detail['quantity']}')),
+                                            DataCell(Text(_currency(detail['unit_price'] as num))),
+                                            DataCell(Text(_currency(
+                                                (detail['unit_price'] as num) * (detail['quantity'] as int)))),
+                                            DataCell(
+                                              detail['added_to_stock'] == true
+                                                  ? const Text('Added')
+                                                  : TextButton(
+                                                      onPressed: () => _addToStock(detail),
+                                                      child: const Text('Add to stock'),
+                                                    ),
+                                            ),
+                                            DataCell(
+                                              Row(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit),
+                                                    onPressed: () => _openPurchaseDetailDialog(detail: detail),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete),
+                                                    onPressed: () => _deletePurchaseDetail(detail['id'] as String),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),

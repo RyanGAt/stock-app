@@ -83,6 +83,10 @@ class SupabaseService {
     await client.from('item_stock').upsert(data, onConflict: 'item_id,size,user_id');
   }
 
+  Future<void> createItemStock(Map<String, dynamic> data) async {
+    await client.from('item_stock').insert(data);
+  }
+
   Future<void> updateItemStock(String id, Map<String, dynamic> data) async {
     await client.from('item_stock').update(data).eq('id', id);
   }

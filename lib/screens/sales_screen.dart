@@ -67,91 +67,102 @@ class _SalesScreenState extends State<SalesScreen> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(sale == null ? 'Add Sale' : 'Edit Sale'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedItemId,
-                decoration: const InputDecoration(labelText: 'Item'),
-                items: _items
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: item['id'] as String,
-                        child: Text(item['title'] as String),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  selectedItemId = value;
-                },
-              ),
-              DropdownButtonFormField<String>(
-                value: selectedSize,
-                decoration: const InputDecoration(labelText: 'Size'),
-                items: _stock
-                    .where((row) => row['item_id'] == selectedItemId)
-                    .map(
-                      (row) => DropdownMenuItem(
-                        value: row['size'] as String?,
-                        child: Text(row['size'] ?? 'OS'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) => selectedSize = value,
-              ),
-              TextField(
-                controller: platformController,
-                decoration: const InputDecoration(labelText: 'Platform'),
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(labelText: 'Sale Price'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: feesController,
-                decoration: const InputDecoration(labelText: 'Fees'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: shippingController,
-                decoration: const InputDecoration(labelText: 'Shipping'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(soldDate == null
-                        ? 'Sold date not set'
-                        : DateFormat.yMMMd().format(soldDate!)),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now(),
-                        initialDate: soldDate ?? DateTime.now(),
-                      );
-                      if (picked != null) {
-                        setState(() => soldDate = picked);
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: Text(sale == null ? 'Add Sale' : 'Edit Sale'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedItemId,
+                  decoration: const InputDecoration(labelText: 'Item'),
+                  items: _items
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item['id'] as String,
+                          child: Text(item['title'] as String),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setModalState(() {
+                      selectedItemId = value;
+                      final availableSizes = _stock
+                          .where((row) => row['item_id'] == selectedItemId)
+                          .map((row) => row['size'] as String?)
+                          .toSet();
+                      if (selectedSize != null && !availableSizes.contains(selectedSize)) {
+                        selectedSize = null;
                       }
-                    },
-                    child: const Text('Pick Date'),
-                  ),
-                ],
-              ),
-            ],
+                    });
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  value: selectedSize,
+                  decoration: const InputDecoration(labelText: 'Size'),
+                  items: _stock
+                      .where((row) => row['item_id'] == selectedItemId)
+                      .map(
+                        (row) => DropdownMenuItem(
+                          value: row['size'] as String?,
+                          child: Text(row['size'] ?? 'OS'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setModalState(() => selectedSize = value),
+                ),
+                TextField(
+                  controller: platformController,
+                  decoration: const InputDecoration(labelText: 'Platform'),
+                ),
+                TextField(
+                  controller: priceController,
+                  decoration: const InputDecoration(labelText: 'Sale Price'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: feesController,
+                  decoration: const InputDecoration(labelText: 'Fees'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: shippingController,
+                  decoration: const InputDecoration(labelText: 'Shipping'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(soldDate == null
+                          ? 'Sold date not set'
+                          : DateFormat.yMMMd().format(soldDate!)),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                          initialDate: soldDate ?? DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setModalState(() => soldDate = picked);
+                        }
+                      },
+                      child: const Text('Pick Date'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
-        ],
       ),
     );
 
@@ -170,8 +181,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (sale == null) {
       await _service.createSale(payload);
+      _showToast('Sale added.');
     } else {
       await _service.updateSale(sale['id'] as String, payload);
+      _showToast('Sale updated.');
     }
     await _load();
   }
@@ -179,6 +192,7 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<void> _deleteSale(String id) async {
     await _service.deleteSale(id);
     await _load();
+    _showToast('Sale deleted.');
   }
 
   List<Map<String, dynamic>> _filteredSales() {
@@ -199,6 +213,12 @@ class _SalesScreenState extends State<SalesScreen> {
       }
       return true;
     }).toList();
+  }
+
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
