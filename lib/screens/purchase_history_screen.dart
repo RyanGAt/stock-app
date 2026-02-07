@@ -22,6 +22,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   List<Map<String, dynamic>> _purchaseOrders = [];
   List<Map<String, dynamic>> _purchaseDetails = [];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _stock = [];
   String? _selectedPurchaseId;
 
   @override
@@ -39,11 +40,13 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       _service.fetchPurchases(userId),
       _service.fetchPurchaseDetails(userId),
       _service.fetchItems(userId),
+      _service.fetchItemStock(userId),
     ]);
     setState(() {
       _purchaseOrders = results[0];
       _purchaseDetails = results[1];
       _items = results[2];
+      _stock = results[3];
       _selectedPurchaseId ??= _purchaseOrders.firstOrNull?['id'] as String?;
       if (_selectedPurchaseId != null &&
           !_purchaseOrders.any((purchase) => purchase['id'] == _selectedPurchaseId)) {
@@ -293,6 +296,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
           });
         }
       }
+      _showToast('Purchase added.');
     } else {
       final purchaseId = purchase['id'] as String;
       await _service.updatePurchase(purchase['id'] as String, payload);
@@ -311,6 +315,7 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
           'added_to_stock': false,
         });
       }
+      _showToast('Purchase updated.');
     }
     await _load();
     detailQtyController.dispose();
@@ -407,8 +412,10 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
         'size': sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
         'added_to_stock': false,
       });
+      _showToast('Purchase item added.');
     } else {
       await _service.updatePurchaseDetail(detail['id'] as String, payload);
+      _showToast('Purchase item updated.');
     }
     await _load();
   }
@@ -416,24 +423,38 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   Future<void> _addToStock(Map<String, dynamic> detail) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    await _service.upsertItemStock({
-      'item_id': detail['item_id'],
-      'user_id': userId,
-      'quantity': detail['quantity'],
-      'size': detail['size'],
-    });
-    await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
-    await _load();
+    try {
+      final existing = _stock.firstWhere(
+        (row) => row['item_id'] == detail['item_id'] && row['size'] == detail['size'],
+        orElse: () => {},
+      );
+      final existingQuantity = existing['quantity'] as int? ?? 0;
+      final addQuantity = detail['quantity'] as int? ?? 0;
+      final newQuantity = existingQuantity + addQuantity;
+      await _service.upsertItemStock({
+        'item_id': detail['item_id'],
+        'user_id': userId,
+        'quantity': newQuantity,
+        'size': detail['size'],
+      });
+      await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
+      await _load();
+      _showToast('Added to stock.');
+    } catch (error) {
+      _showToast('Unable to add to stock.');
+    }
   }
 
   Future<void> _deletePurchaseOrder(String id) async {
     await _service.deletePurchase(id);
     await _load();
+    _showToast('Purchase deleted.');
   }
 
   Future<void> _deletePurchaseDetail(String id) async {
     await _service.deletePurchaseDetail(id);
     await _load();
+    _showToast('Purchase item deleted.');
   }
 
   num _calculateTotal(Iterable<Map<String, dynamic>> details) {
@@ -454,6 +475,12 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     final purchaseId = purchase['id'] as String?;
     final totalPrice = purchaseId == null ? 0 : _purchaseTotal(purchaseId);
     return '$formattedDate • ${_currency(totalPrice)}';
+  }
+
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override

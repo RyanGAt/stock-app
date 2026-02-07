@@ -181,8 +181,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (sale == null) {
       await _service.createSale(payload);
+      _showToast('Sale added.');
     } else {
       await _service.updateSale(sale['id'] as String, payload);
+      _showToast('Sale updated.');
     }
     await _load();
   }
@@ -190,6 +192,7 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<void> _deleteSale(String id) async {
     await _service.deleteSale(id);
     await _load();
+    _showToast('Sale deleted.');
   }
 
   List<Map<String, dynamic>> _filteredSales() {
@@ -210,6 +213,12 @@ class _SalesScreenState extends State<SalesScreen> {
       }
       return true;
     }).toList();
+  }
+
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
