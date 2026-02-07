@@ -433,12 +433,18 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       final existingQuantity = existing['quantity'] as int? ?? 0;
       final addQuantity = detail['quantity'] as int? ?? 0;
       final newQuantity = existingQuantity + addQuantity;
-      await _service.upsertItemStock({
-        'item_id': detail['item_id'],
-        'user_id': userId,
-        'quantity': newQuantity,
-        'size': normalizedSize,
-      });
+      if (existing.isNotEmpty) {
+        await _service.updateItemStock(existing['id'] as String, {
+          'quantity': newQuantity,
+        });
+      } else {
+        await _service.createItemStock({
+          'item_id': detail['item_id'],
+          'user_id': userId,
+          'quantity': newQuantity,
+          'size': normalizedSize,
+        });
+      }
       await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
       await _load();
       _showToast('Added to stock.');
