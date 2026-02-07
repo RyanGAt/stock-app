@@ -65,7 +65,7 @@ class StockApp extends StatelessWidget {
           elevation: 0,
           centerTitle: false,
         ),
-        dialogTheme: DialogTheme(
+        dialogTheme: DialogThemeData(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           titleTextStyle: const TextStyle(

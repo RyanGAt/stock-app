@@ -429,9 +429,9 @@ class _LineChartPainter extends CustomPainter {
     final path = Path();
     for (var i = 0; i < points.length; i++) {
       final denominator = points.length - 1;
-      final x = denominator == 0 ? 0 : size.width * (i / denominator);
+      final x = denominator == 0 ? 0.0 : size.width * (i / denominator);
       final normalized = range == 0 ? 0.5 : ((points[i].value - minValue) / range);
-      final y = size.height - (normalized * size.height);
+      final y = size.height - (normalized.toDouble() * size.height);
       if (i == 0) {
         path.moveTo(x, y);
       } else {
