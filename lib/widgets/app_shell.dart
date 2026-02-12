@@ -9,23 +9,26 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       body: Row(
         children: [
           const _Sidebar(),
           Expanded(
             child: Container(
-              color: const Color(0xFFF7F7FA),
-              child: Column(
-                children: [
-                  const _TopBar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: child,
+              color: theme.scaffoldBackgroundColor,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    const _TopBar(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                        child: child,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -40,33 +43,45 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final user = Supabase.instance.client.auth.currentUser;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 12,
-            offset: Offset(0, 2),
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Row(
         children: [
-          Text(
-            'Vinted Inventory Assistant',
-            style: Theme.of(context).textTheme.titleLarge,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Inventory Workspace', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 2),
+              Text(
+                'Track stock, purchases, and sales in one place.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ),
           const Spacer(),
-          if (user != null)
-            Text(
-              user.email ?? '',
-              style: Theme.of(context).textTheme.bodySmall,
+          if (user != null && user.email != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
+                  const SizedBox(width: 6),
+                  Text(user.email!, style: theme.textTheme.bodySmall),
+                ],
+              ),
             ),
           const SizedBox(width: 16),
-          OutlinedButton.icon(
+          FilledButton.tonalIcon(
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
               if (context.mounted) {
@@ -87,36 +102,48 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      width: 260,
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      color: const Color(0xFF0F172A),
+      width: 248,
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: const Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         children: [
-          const Text(
-            'Vinted\nInventory Assistant',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-              height: 1.2,
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 18,
+                backgroundColor: Color(0xFF2563EB),
+                child: Icon(Icons.inventory_2, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Vinted Inventory',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: ListView(
+              children: const [
+                _NavItem(label: 'Dashboard', route: '/', icon: Icons.dashboard),
+                _NavItem(label: 'Items', route: '/items', icon: Icons.style),
+                _NavItem(label: 'Purchase History', route: '/purchases', icon: Icons.receipt_long),
+                _NavItem(label: 'Stock', route: '/stock', icon: Icons.inventory),
+                _NavItem(label: 'Sales', route: '/sales', icon: Icons.trending_up),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          _NavItem(label: 'Dashboard', route: '/'),
-          _NavItem(label: 'Items', route: '/items'),
-          _NavItem(label: 'Purchase History', route: '/purchases'),
-          _NavItem(label: 'Stock', route: '/stock'),
-          _NavItem(label: 'Sales', route: '/sales'),
-          const Spacer(),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Inventory management for Vinted sellers.',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
+          Text(
+            'Simple inventory tracking for Vinted sellers.',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -125,23 +152,43 @@ class _Sidebar extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.label, required this.route});
+  const _NavItem({required this.label, required this.route, required this.icon});
 
   final String label;
   final String route;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isActive = GoRouterState.of(context).uri.toString() == route;
-    return ListTile(
-      title: Text(
-        label,
-        style: TextStyle(
-          color: isActive ? Colors.white : const Color(0xFFCBD5F5),
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+    final color = isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: isActive ? theme.colorScheme.primary.withOpacity(0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.go(route),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                        color: color,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      onTap: () => context.go(route),
     );
   }
 }

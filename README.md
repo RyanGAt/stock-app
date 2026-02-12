@@ -24,10 +24,10 @@ flutter run -d chrome --dart-define=SUPABASE_URL=your_supabase_url --dart-define
 Ensure the following tables/views exist (see project prompt for full schema):
 
 - `items`
-- `listings`
 - `sales`
 - `item_stock`
-- `item_purchases`
+- `purchases`
+- `purchase_details`
 - `item_costs` (view)
 
 Edge Function:

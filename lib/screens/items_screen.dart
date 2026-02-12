@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../services/supabase_service.dart';
 import '../widgets/scrollable_data_table.dart';
@@ -19,7 +18,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
   late final SupabaseService _service;
   bool _loading = true;
   List<Map<String, dynamic>> _items = [];
-  List<Map<String, dynamic>> _listings = [];
 
   @override
   void initState() {
@@ -40,27 +38,11 @@ class _ItemsScreenState extends State<ItemsScreen> {
     setState(() => _loading = true);
     final results = await Future.wait([
       _service.fetchItems(userId),
-      _service.fetchListings(userId),
     ]);
     setState(() {
       _items = results[0];
-      _listings = results[1];
       _loading = false;
     });
-  }
-
-  String? _listingUrlForItem(String itemId) {
-    final listing = _listings.firstWhere(
-      (row) => row['item_id'] == itemId && row['status'] == 'Active',
-      orElse: () => {},
-    );
-    return listing['source_url'] as String?;
-  }
-
-  Future<void> _openListing(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _openItemDialog({Map<String, dynamic>? item}) async {
@@ -171,7 +153,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         DataColumn(label: Text('Size')),
                         DataColumn(label: Text('Colour')),
                         DataColumn(label: Text('Created At')),
-                        DataColumn(label: Text('Buy / View')),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: filteredItems
@@ -184,14 +165,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 DataCell(Text(item['size'] ?? '')),
                                 DataCell(Text(item['colour'] ?? '')),
                                 DataCell(Text(DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)))),
-                                DataCell(
-                                  TextButton(
-                                    onPressed: _listingUrlForItem(item['id'] as String) == null
-                                        ? null
-                                        : () => _openListing(_listingUrlForItem(item['id'] as String)!),
-                                    child: Text(_listingUrlForItem(item['id'] as String) == null ? '—' : 'View listing'),
-                                  ),
-                                ),
                                 DataCell(
                                   Row(
                                     children: [

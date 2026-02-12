@@ -28,31 +28,10 @@ class SupabaseService {
     await client.from('items').delete().eq('id', id);
   }
 
-  Future<List<Map<String, dynamic>>> fetchListings(String userId) async {
-    final response = await client
-        .from('listings')
-        .select('*, items(*)')
-        .eq('user_id', userId)
-        .order('listed_date', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  Future<void> createListing(Map<String, dynamic> data) async {
-    await client.from('listings').insert(data);
-  }
-
-  Future<void> updateListing(String id, Map<String, dynamic> data) async {
-    await client.from('listings').update(data).eq('id', id);
-  }
-
-  Future<void> deleteListing(String id) async {
-    await client.from('listings').delete().eq('id', id);
-  }
-
   Future<List<Map<String, dynamic>>> fetchSales(String userId) async {
     final response = await client
         .from('sales')
-        .select('*, listings(*), items(*)')
+        .select('*, items(*)')
         .eq('user_id', userId)
         .order('sold_date', ascending: false);
     return List<Map<String, dynamic>>.from(response);
