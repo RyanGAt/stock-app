@@ -1,21 +1,41 @@
 workflows:
-  android-debug:
-    name: Android Debug Build
+  default-workflow:
+    name: Default Workflow
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: stable
+      xcode: latest
     scripts:
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Generate Android project if missing
+      - name: Generate native projects if missing
         script: |
+          MISSING_PLATFORMS=""
+
           if [ ! -d "android" ]; then
-            flutter create --platforms=android .
+            MISSING_PLATFORMS="android"
+          fi
+
+          if [ ! -d "ios" ]; then
+            if [ -n "$MISSING_PLATFORMS" ]; then
+              MISSING_PLATFORMS="$MISSING_PLATFORMS,ios"
+            else
+              MISSING_PLATFORMS="ios"
+            fi
+          fi
+
+          if [ -n "$MISSING_PLATFORMS" ]; then
+            flutter create --platforms="$MISSING_PLATFORMS" .
           fi
       - name: Build Android APK
         script: |
           flutter build apk --debug
+      - name: Build iOS (no codesign)
+        script: |
+          flutter build ios --debug --no-codesign
     artifacts:
       - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.app
+      - flutter_drive.log
