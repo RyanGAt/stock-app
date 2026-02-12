@@ -27,6 +27,10 @@ workflows:
           [ -d ios/Runner.xcodeproj ] && echo "- ios/Runner.xcodeproj exists" || echo "- ios/Runner.xcodeproj missing"
       - name: Build Android APK
         script: |
+          echo "Ensuring Gradle wrapper JAR exists after flutter create..."
+          gradle -p android wrapper --gradle-version 8.10.2 --distribution-type bin
+          test -s android/gradle/wrapper/gradle-wrapper.jar
+
           flutter build apk --debug
       - name: Build iOS (no codesign)
         script: |
