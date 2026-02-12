@@ -34,3 +34,22 @@ Edge Function:
 - `import-vinted`
 
 All queries filter by `user_id`.
+
+
+## Codemagic fix for this repo
+
+This repository currently tracks only the Dart source (`lib/`) and does not include generated native folders like `ios/` or `android/`.
+
+If Codemagic is configured as **Android & iOS**, the iOS step fails with:
+
+```
+Did not find xcodeproj from /Users/builder/clone/ios
+```
+
+Use the checked-in `codemagic.yaml` workflow (`android-debug`) so Codemagic:
+
+1. Runs `flutter pub get`
+2. Generates `android/` only when needed (`flutter create --platforms=android .`)
+3. Builds a debug APK
+
+If you want iOS builds too, generate and commit the `ios/` project first (or add a matching `flutter create --platforms=ios .` step and signing configuration).
