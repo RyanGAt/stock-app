@@ -56,3 +56,8 @@ Use the checked-in `codemagic.yaml` workflow (`yaml-auto-native`) and make sure 
 If your build screen still shows generic steps like **Installing dependencies** and fails before the script named **Verify YAML workflow is running**, then Codemagic is still using a UI workflow instead of `codemagic.yaml`.
 
 If you keep using Codemagic UI workflows instead of `codemagic.yaml`, you must manually add a pre-build step that runs `flutter create --platforms=android,ios --overwrite .` before platform build steps.
+
+If Codemagic still reports `Scheme "Runner" not found`, reconfigure the iOS project settings in the Codemagic UI to use:
+- Project path: `ios/Runner.xcworkspace`
+- Scheme: `Runner`
+
