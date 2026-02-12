@@ -18,7 +18,7 @@ workflows:
           flutter pub get
       - name: Restore Gradle wrapper jar (not tracked in git)
         script: |
-          gradle -p android wrapper --gradle-version 8.10.2 --distribution-type bin
+          gradle -p android wrapper --gradle-version 8.11.1 --distribution-type bin
           test -s android/gradle/wrapper/gradle-wrapper.jar
       - name: Install required Android SDK components
         script: |
