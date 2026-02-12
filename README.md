@@ -49,10 +49,10 @@ Did not find xcodeproj from /Users/builder/clone/ios
 Use the checked-in `codemagic.yaml` workflow (`yaml-auto-native`) and make sure the app is set to **Use codemagic.yaml** in Codemagic settings. This workflow:
 
 1. Runs `flutter pub get`
-2. Auto-generates missing native projects (`flutter create --platforms=android,ios .` as needed)
+2. Re-generates Android and iOS native projects on every build (`flutter create --platforms=android,ios --overwrite .`)
 3. Builds Android debug APK
 4. Builds iOS debug app with `--no-codesign`
 
 If your build screen still shows generic steps like **Installing dependencies** and fails before the script named **Verify YAML workflow is running**, then Codemagic is still using a UI workflow instead of `codemagic.yaml`.
 
-If you keep using Codemagic UI workflows instead of `codemagic.yaml`, you must manually add a pre-build step that runs `flutter create --platforms=ios .` before iOS build steps.
+If you keep using Codemagic UI workflows instead of `codemagic.yaml`, you must manually add a pre-build step that runs `flutter create --platforms=android,ios --overwrite .` before platform build steps.
