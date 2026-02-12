@@ -1,0 +1,10 @@
+.gradle/
+/local.properties
+/captures/
+GeneratedPluginRegistrant.java
+key.properties
+**/*.keystore
+**/*.jks
+
+# Keep PRs text-only for tooling compatibility
+/gradle/wrapper/gradle-wrapper.jar

@@ -38,7 +38,9 @@ All queries filter by `user_id`.
 
 ## Codemagic fix for this repo
 
-This repository now includes a checked-in `ios/` native project so Codemagic UI workflows can find `Runner.xcodeproj` even before any custom scripts run.
+This repository now includes checked-in `ios/` and `android/` native projects so Codemagic UI workflows can find both platform directories before custom scripts run.
+
+Note: `android/gradle/wrapper/gradle-wrapper.jar` is intentionally not committed to keep PR tooling happy with text-only diffs; the existing `flutter create --platforms=android,ios --overwrite .` step regenerates native wrapper artifacts during CI.
 
 If Codemagic is configured as **Android & iOS** while those folders are missing, builds fail with:
 
