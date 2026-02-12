@@ -20,6 +20,10 @@ workflows:
         script: |
           gradle -p android wrapper --gradle-version 8.10.2 --distribution-type bin
           test -s android/gradle/wrapper/gradle-wrapper.jar
+      - name: Install required Android SDK components
+        script: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build Android APK
         script: |
           flutter build apk --debug
