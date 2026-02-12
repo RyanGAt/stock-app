@@ -38,7 +38,7 @@ All queries filter by `user_id`.
 
 ## Codemagic fix for this repo
 
-This repository currently tracks only the Dart source (`lib/`) and may not include generated native folders like `ios/` or `android/`.
+This repository now includes a checked-in `ios/` native project so Codemagic UI workflows can find `Runner.xcodeproj` even before any custom scripts run.
 
 If Codemagic is configured as **Android & iOS** while those folders are missing, builds fail with:
 
@@ -49,10 +49,15 @@ Did not find xcodeproj from /Users/builder/clone/ios
 Use the checked-in `codemagic.yaml` workflow (`yaml-auto-native`) and make sure the app is set to **Use codemagic.yaml** in Codemagic settings. This workflow:
 
 1. Runs `flutter pub get`
-2. Auto-generates missing native projects (`flutter create --platforms=android,ios .` as needed)
+2. Re-generates Android and iOS native projects on every build (`flutter create --platforms=android,ios --overwrite .`) when using YAML mode
 3. Builds Android debug APK
 4. Builds iOS debug app with `--no-codesign`
 
 If your build screen still shows generic steps like **Installing dependencies** and fails before the script named **Verify YAML workflow is running**, then Codemagic is still using a UI workflow instead of `codemagic.yaml`.
 
-If you keep using Codemagic UI workflows instead of `codemagic.yaml`, you must manually add a pre-build step that runs `flutter create --platforms=ios .` before iOS build steps.
+If you keep using Codemagic UI workflows instead of `codemagic.yaml`, you must manually add a pre-build step that runs `flutter create --platforms=android,ios --overwrite .` before platform build steps.
+
+If Codemagic still reports `Scheme "Runner" not found`, reconfigure the iOS project settings in the Codemagic UI to use:
+- Project path: `ios/Runner.xcworkspace`
+- Scheme: `Runner`
+
