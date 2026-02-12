@@ -1,21 +1,54 @@
 workflows:
-  android-debug:
-    name: Android Debug Build
+  yaml-auto-native:
+    name: YAML Auto Native Build
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: stable
+      xcode: latest
     scripts:
+      - name: Verify YAML workflow is running
+        script: |
+          echo "Running workflow from codemagic.yaml"
+          echo "Branch: $CM_BRANCH"
+          echo "Commit: $CM_COMMIT"
+          pwd
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Generate Android project if missing
+      - name: Generate native projects if missing
         script: |
+          MISSING_PLATFORMS=""
+
           if [ ! -d "android" ]; then
-            flutter create --platforms=android .
+            MISSING_PLATFORMS="android"
           fi
+
+          if [ ! -d "ios" ]; then
+            if [ -n "$MISSING_PLATFORMS" ]; then
+              MISSING_PLATFORMS="$MISSING_PLATFORMS,ios"
+            else
+              MISSING_PLATFORMS="ios"
+            fi
+          fi
+
+          if [ -n "$MISSING_PLATFORMS" ]; then
+            echo "Generating missing platforms: $MISSING_PLATFORMS"
+            flutter create --platforms="$MISSING_PLATFORMS" .
+          else
+            echo "No missing native platform folders detected."
+          fi
+
+          echo "Native folders after generation step:"
+          [ -d android ] && echo "- android exists" || echo "- android missing"
+          [ -d ios ] && echo "- ios exists" || echo "- ios missing"
       - name: Build Android APK
         script: |
           flutter build apk --debug
+      - name: Build iOS (no codesign)
+        script: |
+          flutter build ios --debug --no-codesign
     artifacts:
       - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.app
+      - flutter_drive.log
