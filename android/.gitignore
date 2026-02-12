@@ -6,5 +6,5 @@ key.properties
 **/*.keystore
 **/*.jks
 
-# Keep PRs text-only for tooling compatibility
+# Keep wrapper JAR out of git (PR tool rejects binaries)
 /gradle/wrapper/gradle-wrapper.jar
