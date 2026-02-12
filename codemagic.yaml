@@ -16,32 +16,15 @@ workflows:
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Generate native projects if missing
+      - name: Regenerate native projects
         script: |
-          MISSING_PLATFORMS=""
+          echo "Regenerating Android/iOS native folders to guarantee fresh project files..."
+          flutter create --platforms=android,ios --overwrite .
 
-          if [ ! -d "android" ]; then
-            MISSING_PLATFORMS="android"
-          fi
-
-          if [ ! -d "ios" ]; then
-            if [ -n "$MISSING_PLATFORMS" ]; then
-              MISSING_PLATFORMS="$MISSING_PLATFORMS,ios"
-            else
-              MISSING_PLATFORMS="ios"
-            fi
-          fi
-
-          if [ -n "$MISSING_PLATFORMS" ]; then
-            echo "Generating missing platforms: $MISSING_PLATFORMS"
-            flutter create --platforms="$MISSING_PLATFORMS" .
-          else
-            echo "No missing native platform folders detected."
-          fi
-
-          echo "Native folders after generation step:"
+          echo "Native folders after regeneration step:"
           [ -d android ] && echo "- android exists" || echo "- android missing"
           [ -d ios ] && echo "- ios exists" || echo "- ios missing"
+          [ -d ios/Runner.xcodeproj ] && echo "- ios/Runner.xcodeproj exists" || echo "- ios/Runner.xcodeproj missing"
       - name: Build Android APK
         script: |
           flutter build apk --debug
