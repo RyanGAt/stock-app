@@ -15,7 +15,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3B06AD1E1E4923F5004D2608 /* Flutter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Flutter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90186004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB51CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -180,7 +179,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.stockApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -207,7 +206,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.stockApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -234,7 +233,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.stockApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
