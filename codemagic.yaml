@@ -27,10 +27,11 @@ workflows:
       - name: Build Android APK
         script: |
           flutter build apk --debug
-      - name: Build iOS (no codesign)
+      - name: Build iOS Simulator app
         script: |
-          flutter build ios --debug --no-codesign
+          flutter build ios --debug --simulator
     artifacts:
       - build/**/outputs/**/*.apk
       - build/ios/iphoneos/*.app
+      - build/ios/iphonesimulator/*.app
       - flutter_drive.log
