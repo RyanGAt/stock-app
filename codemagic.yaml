@@ -18,15 +18,57 @@ workflows:
           flutter pub get
       - name: Restore Gradle wrapper jar (not tracked in git)
         script: |
-          gradle -p android wrapper --gradle-version 8.10.2 --distribution-type bin
+          gradle -p android wrapper --gradle-version 8.11.1 --distribution-type bin
           test -s android/gradle/wrapper/gradle-wrapper.jar
+      - name: Install required Android SDK components
+        script: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build Android APK
         script: |
           flutter build apk --debug
-      - name: Build iOS (no codesign)
+      - name: Build iOS Simulator app
         script: |
-          flutter build ios --debug --no-codesign
+          flutter build ios --debug --simulator
     artifacts:
       - build/**/outputs/**/*.apk
       - build/ios/iphoneos/*.app
+      - build/ios/iphonesimulator/*.app
+      - flutter_drive.log
+
+  default-workflow:
+    name: Default Workflow
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Verify YAML workflow is running
+        script: |
+          echo "Running workflow from codemagic.yaml"
+          echo "Branch: $CM_BRANCH"
+          echo "Commit: $CM_COMMIT"
+          pwd
+      - name: Install dependencies
+        script: |
+          flutter pub get
+      - name: Restore Gradle wrapper jar (not tracked in git)
+        script: |
+          gradle -p android wrapper --gradle-version 8.11.1 --distribution-type bin
+          test -s android/gradle/wrapper/gradle-wrapper.jar
+      - name: Install required Android SDK components
+        script: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build Android APK
+        script: |
+          flutter build apk --debug
+      - name: Build iOS Simulator app
+        script: |
+          flutter build ios --debug --simulator
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.app
+      - build/ios/iphonesimulator/*.app
       - flutter_drive.log
