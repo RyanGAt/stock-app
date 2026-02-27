@@ -26,6 +26,10 @@ workflows:
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build Android APK
         script: |
+          echo "Ensuring Gradle wrapper JAR exists after flutter create..."
+          gradle -p android wrapper --gradle-version 8.10.2 --distribution-type bin
+          test -s android/gradle/wrapper/gradle-wrapper.jar
+
           flutter build apk --debug
       - name: Build iOS Simulator app
         script: |
