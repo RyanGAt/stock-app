@@ -16,6 +16,15 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  Future<List<Map<String, dynamic>>> fetchItemsWithListings(String userId) async {
+    final response = await client
+        .from('items')
+        .select('*, listings(*)')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   Future<void> createItem(Map<String, dynamic> data) async {
     await client.from('items').insert(data);
   }
@@ -37,6 +46,15 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  Future<List<Map<String, dynamic>>> fetchSalesWithListings(String userId) async {
+    final response = await client
+        .from('sales')
+        .select('*, listing:listings(*, item:items(*))')
+        .eq('user_id', userId)
+        .order('sold_date', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   Future<void> createSale(Map<String, dynamic> data) async {
     await client.from('sales').insert(data);
   }
@@ -47,6 +65,27 @@ class SupabaseService {
 
   Future<void> deleteSale(String id) async {
     await client.from('sales').delete().eq('id', id);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchListings(String userId) async {
+    final response = await client
+        .from('listings')
+        .select('*, item:items(*)')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> createListing(Map<String, dynamic> data) async {
+    await client.from('listings').insert(data);
+  }
+
+  Future<void> updateListing(String id, Map<String, dynamic> data) async {
+    await client.from('listings').update(data).eq('id', id);
+  }
+
+  Future<void> deleteListing(String id) async {
+    await client.from('listings').delete().eq('id', id);
   }
 
   Future<List<Map<String, dynamic>>> fetchItemStock(String userId) async {
@@ -85,6 +124,28 @@ class SupabaseService {
         .eq('user_id', userId)
         .order('bought_date', ascending: false);
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchItemPurchases(String userId) async {
+    final response = await client
+        .from('item_purchases')
+        .select('*, item:items(*)')
+        .eq('user_id', userId)
+        .order('purchased_at', ascending: false)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> createItemPurchase(Map<String, dynamic> data) async {
+    await client.from('item_purchases').insert(data);
+  }
+
+  Future<void> updateItemPurchase(String id, Map<String, dynamic> data) async {
+    await client.from('item_purchases').update(data).eq('id', id);
+  }
+
+  Future<void> deleteItemPurchase(String id) async {
+    await client.from('item_purchases').delete().eq('id', id);
   }
 
   Future<Map<String, dynamic>> createPurchaseOrder(Map<String, dynamic> data) async {

@@ -1,0 +1,1 @@
+ E:\\github\\stock-app\\build\\3eef4f3b28f402ebfac897fb0110823d\\dart_build_result.json:  E:\\flutter\\flutter\\bin\\cache\\dart-sdk\\version E:\\github\\stock-app\\.dart_tool\\package_config.json E:\\github\\stock-app\\pubspec.yaml e:\\github\\stock-app\\.dart_tool\\package_config.json

@@ -1,10 +1,11 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_service.dart';
+import '../utils/item_form_options.dart';
 import '../widgets/scrollable_data_table.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stat_card.dart';
@@ -47,371 +48,202 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
       _purchaseDetails = results[1];
       _items = results[2];
       _stock = results[3];
-      _selectedPurchaseId ??= _purchaseOrders.firstOrNull?['id'] as String?;
-      if (_selectedPurchaseId != null &&
-          !_purchaseOrders.any((purchase) => purchase['id'] == _selectedPurchaseId)) {
-        _selectedPurchaseId = _purchaseOrders.firstOrNull?['id'] as String?;
-      }
+      _selectedPurchaseId ??= _purchaseOrders.isEmpty ? null : _purchaseOrders.first['id'] as String?;
       _loading = false;
     });
   }
 
+  Future<String?> _pickOption(String title, List<String> options, [String? current]) {
+    final controller = TextEditingController();
+    return showDialog<String?>(
+      context: context,
+      barrierColor: const Color.fromRGBO(15, 23, 42, 0.38),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final q = controller.text.trim().toLowerCase();
+          final filtered = options.where((e) => e.toLowerCase().contains(q)).toList();
+          return Dialog(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search...'),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final value = filtered[index];
+                          return ListTile(
+                            title: Text(value),
+                            trailing: value == current ? const Icon(Icons.check, color: Color(0xFF4F46E5)) : null,
+                            onTap: () => Navigator.pop(context, value),
+                          );
+                        },
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Clear')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String? _itemTitleById(String? id) {
+    if (id == null) return null;
+    for (final item in _items) {
+      if (item['id'] == id) return item['title'] as String?;
+    }
+    return null;
+  }
+
+  String _purchaseLabel(Map<String, dynamic> purchase) {
+    final id = purchase['id'] as String?;
+    final total = id == null ? 0 : _purchaseTotal(id);
+    return '${purchase['bought_date'] ?? 'No date'} • ${_currency(total)}';
+  }
+
+  num _purchaseTotal(String purchaseId) => _purchaseDetails.where((row) => row['purchase_id'] == purchaseId).fold<num>(0, (sum, row) => sum + (row['unit_price'] as num? ?? 0) * (row['quantity'] as int? ?? 0));
+
   Future<void> _openPurchaseOrderDialog({Map<String, dynamic>? purchase}) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    DateTime? boughtDate = purchase?['bought_date'] == null
-        ? null
-        : DateTime.parse(purchase?['bought_date'] as String);
-    final detailQtyController = TextEditingController(text: '1');
-    final detailPriceController = TextEditingController(text: '');
-    final detailSizeController = TextEditingController(text: '');
-    final draftDetails = purchase == null
-        ? <Map<String, dynamic>>[]
-        : _purchaseDetails
-            .where((row) => row['purchase_id'] == purchase['id'])
-            .map((row) => Map<String, dynamic>.from(row))
-            .toList();
-    final deletedDetailIds = <String>[];
-    String? selectedDetailItemId = draftDetails.isNotEmpty
-        ? draftDetails.first['item_id'] as String?
-        : _items.firstOrNull?['id'] as String?;
-
-    final result = await showDialog<bool>(
+    DateTime? boughtDate =
+        purchase?['bought_date'] == null ? DateTime.now() : DateTime.tryParse(purchase!['bought_date']);
+    final lines = purchase == null ? <Map<String, dynamic>>[{'item_id': null, 'size': null, 'quantity': 1, 'unit_price': 0}] : <Map<String, dynamic>>[];
+    final save = await showDialog<bool>(
       context: context,
+      barrierColor: const Color.fromRGBO(15, 23, 42, 0.38),
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
-          title: Text(purchase == null ? 'Add Purchase' : 'Edit Purchase'),
-          insetPadding: const EdgeInsets.all(24),
-          content: SizedBox(
-            width: math.min(math.max(MediaQuery.of(context).size.width - 48, 320.0), 720.0),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 260,
-                        child: Text(
-                          boughtDate == null ? 'Bought date not set' : DateFormat.yMMMd().format(boughtDate!),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now(),
-                            initialDate: boughtDate ?? DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setModalState(() => boughtDate = picked);
-                          }
-                        },
-                        icon: const Icon(Icons.event),
-                        label: const Text('Pick Bought Date'),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 28),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Purchase Details', style: Theme.of(context).textTheme.titleMedium),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Total: ${_currency(_calculateTotal(draftDetails))}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 12,
-                    children: [
-                      SizedBox(
-                        width: 320,
-                        child: DropdownButtonFormField<String>(
-                          value: selectedDetailItemId,
-                          decoration: const InputDecoration(labelText: 'Item'),
-                          items: _items
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item['id'] as String,
-                                  child: Text(item['title'] as String),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) => setModalState(() => selectedDetailItemId = value),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 200,
-                        child: TextField(
-                          controller: detailSizeController,
-                          decoration: const InputDecoration(labelText: 'Size'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 12,
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    children: [
-                      SizedBox(
-                        width: 140,
-                        child: TextField(
-                          controller: detailQtyController,
-                          decoration: const InputDecoration(labelText: 'Quantity'),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 180,
-                        child: TextField(
-                          controller: detailPriceController,
-                          decoration: const InputDecoration(labelText: 'Unit Price'),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      SizedBox(
-                        height: 48,
-                        child: FilledButton.icon(
-                          onPressed: selectedDetailItemId == null
-                              ? null
-                              : () {
-                                  final item = _items.firstWhere(
-                                    (item) => item['id'] == selectedDetailItemId,
-                                    orElse: () => {},
-                                  );
-                                  final sizeValue = detailSizeController.text.trim();
-                                  setModalState(() {
-                                    draftDetails.add({
-                                      'item_id': selectedDetailItemId,
-                                      'items': item,
-                                      'size': sizeValue.isEmpty ? null : sizeValue,
-                                      'quantity': int.tryParse(detailQtyController.text) ?? 1,
-                                      'unit_price': num.tryParse(detailPriceController.text) ?? 0,
-                                    });
-                                    detailQtyController.text = '1';
-                                    detailPriceController.clear();
-                                    detailSizeController.clear();
-                                  });
-                                },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add detail'),
-                        ),
-                      ),
-                    ],
-                  ),
+        builder: (context, setState) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(purchase == null ? 'Add Purchase' : 'Edit Purchase', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    height: 260,
-                    child: draftDetails.isEmpty
-                        ? const Center(child: Text('No details added yet.'))
-                        : ScrollableDataTable(
-                            table: DataTable(
-                              columns: const [
-                                DataColumn(label: Text('Item')),
-                                DataColumn(label: Text('Size')),
-                                DataColumn(label: Text('Qty')),
-                                DataColumn(label: Text('Unit Price')),
-                                DataColumn(label: Text('Line Total')),
-                                DataColumn(label: Text('Actions')),
-                              ],
-                              rows: draftDetails
-                                  .map(
-                                    (detail) => DataRow(
-                                      cells: [
-                                        DataCell(Text(detail['items']?['title'] ?? '')),
-                                        DataCell(Text(detail['size'] ?? '')),
-                                        DataCell(Text('${detail['quantity']}')),
-                                        DataCell(Text(_currency(detail['unit_price'] as num? ?? 0))),
-                                        DataCell(Text(_currency(
-                                            (detail['unit_price'] as num? ?? 0) *
-                                                (detail['quantity'] as int)))),
-                                        DataCell(
-                                          IconButton(
-                                            icon: const Icon(Icons.delete),
-                                            onPressed: () {
-                                              final id = detail['id'] as String?;
-                                              if (id != null) {
-                                                deletedDetailIds.add(id);
-                                              }
-                                              setModalState(() => draftDetails.remove(detail));
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                  ),
-                ],
+                  _Labeled(label: 'Purchase Date', child: InkWell(onTap: () async { final picked = await showDatePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime.now(), initialDate: boughtDate ?? DateTime.now()); if (picked != null) setState(() => boughtDate = picked); }, child: InputDecorator(decoration: const InputDecoration(suffixIcon: Icon(Icons.event_outlined)), child: Text(boughtDate == null ? 'Choose a purchase date' : _formatDate(boughtDate!))))),
+                  if (purchase == null) ...[
+                    const SizedBox(height: 18),
+                    Row(children: [Text('Items in this purchase', style: Theme.of(context).textTheme.titleMedium), const Spacer(), FilledButton.tonalIcon(onPressed: () => setState(() => lines.add({'item_id': null, 'size': null, 'quantity': 1, 'unit_price': 0})), icon: const Icon(Icons.add), label: const Text('Add item line'))]),
+                    const SizedBox(height: 10),
+                    ...lines.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final line = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE2E8F0))),
+                          child: Column(children: [
+                            Row(children: [
+                              Expanded(child: _Labeled(label: 'Item', child: _PickField(value: _itemTitleById(line['item_id'] as String?), hint: 'Select item', onTap: () async { final picked = await _pickOption('Select item', _items.map((e) => e['title'] as String? ?? '').where((e) => e.isNotEmpty).toList(), _itemTitleById(line['item_id'] as String?)); if (picked == null) return; final item = _items.firstWhere((e) => e['title'] == picked, orElse: () => {}); if (item.isNotEmpty) setState(() => line['item_id'] = item['id']); }))),
+                              const SizedBox(width: 12),
+                              Expanded(child: _Labeled(label: 'Size', child: _PickField(value: line['size'] as String?, hint: 'Pick a Vinted size', onTap: () async { final picked = await _pickOption('Choose size', vintedSizeOptions, line['size'] as String?); setState(() => line['size'] = picked); }))),
+                            ]),
+                            const SizedBox(height: 12),
+                            Row(children: [
+                              Expanded(child: _Labeled(label: 'Quantity', child: TextFormField(initialValue: '${line['quantity']}', keyboardType: TextInputType.number, onChanged: (value) => line['quantity'] = int.tryParse(value) ?? 1))),
+                              const SizedBox(width: 12),
+                              Expanded(child: _Labeled(label: 'Unit Price', child: TextFormField(initialValue: '${line['unit_price']}', keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (value) => line['unit_price'] = num.tryParse(value) ?? 0))),
+                              const SizedBox(width: 12),
+                              Padding(padding: const EdgeInsets.only(top: 28), child: IconButton(onPressed: () => setState(() => lines.removeAt(i)), icon: const Icon(Icons.delete_outline))),
+                            ]),
+                          ]),
+                        ),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), const SizedBox(width: 12), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save'))]),
+                ]),
               ),
             ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
-          ],
         ),
       ),
     );
-
-    if (result != true) {
-      detailQtyController.dispose();
-      detailPriceController.dispose();
-      detailSizeController.dispose();
-      return;
-    }
-
+    if (save != true) return;
     final payload = {
       'user_id': userId,
       'bought_date': boughtDate?.toIso8601String(),
-      'total_price': _calculateTotal(draftDetails),
+      'total_price': lines.fold<num>(0, (sum, line) => sum + (line['unit_price'] as num? ?? 0) * (line['quantity'] as int? ?? 0)),
     };
-
     if (purchase == null) {
-      final createdPurchase = await _service.createPurchase(payload);
-      final purchaseId = createdPurchase['id'] as String?;
+      final created = await _service.createPurchase(payload);
+      final purchaseId = created['id'] as String?;
       if (purchaseId != null) {
-        for (final detail in draftDetails) {
-          await _service.createPurchaseDetail({
-            'purchase_id': purchaseId,
-            'item_id': detail['item_id'],
-            'user_id': userId,
-            'quantity': detail['quantity'] as int? ?? 1,
-            'unit_price': detail['unit_price'] as num? ?? 0,
-            'size': detail['size'],
-            'added_to_stock': false,
-          });
+        for (final line in lines) {
+          await _service.createPurchaseDetail({'purchase_id': purchaseId, 'item_id': line['item_id'], 'user_id': userId, 'quantity': line['quantity'], 'unit_price': line['unit_price'], 'size': line['size'], 'added_to_stock': false});
         }
       }
       _showToast('Purchase added.');
     } else {
-      final purchaseId = purchase['id'] as String;
       await _service.updatePurchase(purchase['id'] as String, payload);
-      for (final id in deletedDetailIds) {
-        await _service.deletePurchaseDetail(id);
-      }
-      for (final detail in draftDetails) {
-        if (detail['id'] != null) continue;
-        await _service.createPurchaseDetail({
-          'purchase_id': purchaseId,
-          'item_id': detail['item_id'],
-          'user_id': userId,
-          'quantity': detail['quantity'] as int? ?? 1,
-          'unit_price': detail['unit_price'] as num? ?? 0,
-          'size': detail['size'],
-          'added_to_stock': false,
-        });
-      }
       _showToast('Purchase updated.');
     }
     await _load();
-    detailQtyController.dispose();
-    detailPriceController.dispose();
-    detailSizeController.dispose();
   }
 
   Future<void> _openPurchaseDetailDialog({Map<String, dynamic>? detail}) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    final qtyController = TextEditingController(text: detail?['quantity']?.toString() ?? '1');
-    final priceController = TextEditingController(text: detail?['unit_price']?.toString() ?? '');
-    final sizeController = TextEditingController(text: detail?['size'] ?? '');
-    String? selectedItemId = detail?['item_id'] as String? ?? _items.firstOrNull?['id'] as String?;
-    String? selectedPurchaseId =
-        detail?['purchase_id'] as String? ?? _purchaseOrders.firstOrNull?['id'] as String?;
+    final qty = TextEditingController(text: detail?['quantity']?.toString() ?? '1');
+    final price = TextEditingController(text: detail?['unit_price']?.toString() ?? '');
+    String? selectedSize = detail?['size'] as String?;
+    String? selectedItemId = detail?['item_id'] as String? ?? (_items.isEmpty ? null : _items.first['id'] as String?);
+    String? selectedPurchaseId = detail?['purchase_id'] as String? ?? (_purchaseOrders.isEmpty ? null : _purchaseOrders.first['id'] as String?);
 
-    final result = await showDialog<bool>(
+    final save = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(detail == null ? 'Add Purchase Item' : 'Edit Purchase Item'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedPurchaseId,
-                decoration: const InputDecoration(labelText: 'Purchase'),
-                items: _purchaseOrders
-                    .map(
-                      (purchase) => DropdownMenuItem(
-                        value: purchase['id'] as String,
-                        child: Text(_purchaseLabel(purchase)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) => selectedPurchaseId = value,
+      barrierColor: const Color.fromRGBO(15, 23, 42, 0.38),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(detail == null ? 'Add Purchase Item' : 'Edit Purchase Item', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  _Labeled(label: 'Purchase', child: _PickField(value: selectedPurchaseId == null ? null : _purchaseLabel(_purchaseOrders.firstWhere((e) => e['id'] == selectedPurchaseId, orElse: () => {})), hint: 'Select purchase', onTap: () async { final picked = await _pickOption('Select purchase', _purchaseOrders.map(_purchaseLabel).toList()); if (picked == null) return; final purchase = _purchaseOrders.firstWhere((e) => _purchaseLabel(e) == picked, orElse: () => {}); if (purchase.isNotEmpty) setState(() => selectedPurchaseId = purchase['id'] as String?); })),
+                  const SizedBox(height: 12),
+                  _Labeled(label: 'Item', child: _PickField(value: _itemTitleById(selectedItemId), hint: 'Select item', onTap: () async { final picked = await _pickOption('Select item', _items.map((e) => e['title'] as String? ?? '').where((e) => e.isNotEmpty).toList(), _itemTitleById(selectedItemId)); if (picked == null) return; final item = _items.firstWhere((e) => e['title'] == picked, orElse: () => {}); if (item.isNotEmpty) setState(() => selectedItemId = item['id'] as String?); })),
+                  const SizedBox(height: 12),
+                  _Labeled(label: 'Size (optional)', child: _PickField(value: selectedSize, hint: 'Pick a Vinted size', onTap: () async { final picked = await _pickOption('Choose size', vintedSizeOptions, selectedSize); setState(() => selectedSize = picked); })),
+                  const SizedBox(height: 12),
+                  Row(children: [Expanded(child: _Labeled(label: 'Quantity', child: TextField(controller: qty, keyboardType: TextInputType.number))), const SizedBox(width: 12), Expanded(child: _Labeled(label: 'Unit Price', child: TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true))))]),
+                  const SizedBox(height: 12),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), const SizedBox(width: 12), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save'))]),
+                ]),
               ),
-              DropdownButtonFormField<String>(
-                value: selectedItemId,
-                decoration: const InputDecoration(labelText: 'Item'),
-                items: _items
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: item['id'] as String,
-                        child: Text(item['title'] as String),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) => selectedItemId = value,
-              ),
-              TextField(
-                controller: sizeController,
-                decoration: const InputDecoration(labelText: 'Size'),
-              ),
-              TextField(
-                controller: qtyController,
-                decoration: const InputDecoration(labelText: 'Quantity'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(labelText: 'Unit Price'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
-        ],
       ),
     );
-
-    if (result != true || selectedItemId == null || selectedPurchaseId == null) return;
-
-    final payload = {
-      'purchase_id': selectedPurchaseId,
-      'item_id': selectedItemId,
-      'user_id': userId,
-      'quantity': int.tryParse(qtyController.text) ?? 1,
-      'unit_price': num.tryParse(priceController.text) ?? 0,
-      'size': sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
-    };
-
+    if (save != true || selectedItemId == null || selectedPurchaseId == null) return;
+    final payload = {'purchase_id': selectedPurchaseId, 'item_id': selectedItemId, 'user_id': userId, 'quantity': int.tryParse(qty.text) ?? 1, 'unit_price': num.tryParse(price.text) ?? 0, 'size': selectedSize};
     if (detail == null) {
-      await _service.createPurchaseDetail({
-        'purchase_id': selectedPurchaseId,
-        'item_id': selectedItemId,
-        'user_id': userId,
-        'quantity': int.tryParse(qtyController.text) ?? 1,
-        'unit_price': num.tryParse(priceController.text) ?? 0,
-        'size': sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
-        'added_to_stock': false,
-      });
+      await _service.createPurchaseDetail({...payload, 'added_to_stock': false});
       _showToast('Purchase item added.');
     } else {
       await _service.updatePurchaseDetail(detail['id'] as String, payload);
@@ -419,31 +251,20 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     }
     await _load();
   }
-
   Future<void> _addToStock(Map<String, dynamic> detail) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
     try {
       final sizeValue = (detail['size'] as String?)?.trim();
       final normalizedSize = sizeValue == null || sizeValue.isEmpty ? 'OS' : sizeValue;
-      final existing = _stock.firstWhere(
-        (row) => row['item_id'] == detail['item_id'] && (row['size'] ?? 'OS') == normalizedSize,
-        orElse: () => {},
-      );
+      final existing = _stock.firstWhere((row) => row['item_id'] == detail['item_id'] && (row['size'] ?? 'OS') == normalizedSize, orElse: () => {});
       final existingQuantity = existing['quantity'] as int? ?? 0;
       final addQuantity = detail['quantity'] as int? ?? 0;
       final newQuantity = existingQuantity + addQuantity;
       if (existing.isNotEmpty) {
-        await _service.updateItemStock(existing['id'] as String, {
-          'quantity': newQuantity,
-        });
+        await _service.updateItemStock(existing['id'] as String, {'quantity': newQuantity});
       } else {
-        await _service.createItemStock({
-          'item_id': detail['item_id'],
-          'user_id': userId,
-          'quantity': newQuantity,
-          'size': normalizedSize,
-        });
+        await _service.createItemStock({'item_id': detail['item_id'], 'user_id': userId, 'quantity': newQuantity, 'size': normalizedSize});
       }
       await _service.updatePurchaseDetail(detail['id'] as String, {'added_to_stock': true});
       await _load();
@@ -453,217 +274,67 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
     }
   }
 
-  Future<void> _deletePurchaseOrder(String id) async {
-    await _service.deletePurchase(id);
-    await _load();
-    _showToast('Purchase deleted.');
-  }
-
-  Future<void> _deletePurchaseDetail(String id) async {
-    await _service.deletePurchaseDetail(id);
-    await _load();
-    _showToast('Purchase item deleted.');
-  }
-
-  num _calculateTotal(Iterable<Map<String, dynamic>> details) {
-    return details.fold<num>(
-      0,
-      (sum, row) => sum + (row['unit_price'] as num? ?? 0) * (row['quantity'] as int? ?? 0),
-    );
-  }
-
-  num _purchaseTotal(String purchaseId) {
-    return _calculateTotal(_purchaseDetails.where((row) => row['purchase_id'] == purchaseId));
-  }
-
-  String _purchaseLabel(Map<String, dynamic>? purchase) {
-    if (purchase == null) return 'Purchase';
-    final boughtDate = purchase['bought_date'] as String?;
-    final formattedDate = boughtDate == null ? 'No date' : boughtDate;
-    final purchaseId = purchase['id'] as String?;
-    final totalPrice = purchaseId == null ? 0 : _purchaseTotal(purchaseId);
-    return '$formattedDate • ${_currency(totalPrice)}';
-  }
-
-  void _showToast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  Future<void> _deletePurchaseOrder(String id) async { await _service.deletePurchase(id); await _load(); _showToast('Purchase deleted.'); }
+  Future<void> _deletePurchaseDetail(String id) async { await _service.deletePurchaseDetail(id); await _load(); _showToast('Purchase item deleted.'); }
+  void _showToast(String message) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); }
 
   @override
   Widget build(BuildContext context) {
-    final totalSpend = _purchaseDetails.fold<num>(
-      0,
-      (sum, row) => sum + (row['unit_price'] as num) * (row['quantity'] as int),
-    );
+    final totalSpend = _purchaseDetails.fold<num>(0, (sum, row) => sum + (row['unit_price'] as num) * (row['quantity'] as int));
     final totalUnits = _purchaseDetails.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
     final avgCost = totalUnits == 0 ? 0 : totalSpend / totalUnits;
     final distinctItems = _purchaseDetails.map((row) => row['item_id']).toSet().length;
-
-    final selectedDetails = _selectedPurchaseId == null
-        ? <Map<String, dynamic>>[]
-        : _purchaseDetails
-            .where((row) => row['purchase_id'] == _selectedPurchaseId)
-            .toList();
+    final selectedDetails = _selectedPurchaseId == null ? <Map<String, dynamic>>[] : _purchaseDetails.where((row) => row['purchase_id'] == _selectedPurchaseId).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Purchase History', style: Theme.of(context).textTheme.headlineMedium),
-            const Spacer(),
-            FilledButton.icon(
-              onPressed: () => _openPurchaseOrderDialog(),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Purchase'),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: _purchaseOrders.isEmpty ? null : () => _openPurchaseDetailDialog(),
-              icon: const Icon(Icons.playlist_add),
-              label: const Text('Add Purchase Item'),
-            ),
-          ],
-        ),
+        Row(children: [Text('Purchase History', style: Theme.of(context).textTheme.headlineMedium), const Spacer(), FilledButton.icon(onPressed: () => _openPurchaseOrderDialog(), icon: const Icon(Icons.add), label: const Text('Add Purchase')), const SizedBox(width: 12), FilledButton.icon(onPressed: _purchaseOrders.isEmpty ? null : () => _openPurchaseDetailDialog(), icon: const Icon(Icons.playlist_add), label: const Text('Add Purchase Item'))]),
         const SizedBox(height: 24),
-        GridView.count(
-          crossAxisCount: 4,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          shrinkWrap: true,
-          childAspectRatio: 2.6,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            StatCard(label: 'Total Spend', value: _currency(totalSpend)),
-            StatCard(label: 'Total Units Purchased', value: totalUnits.toString()),
-            StatCard(label: 'Avg Cost / Unit', value: _currency(avgCost)),
-            StatCard(label: 'Distinct Items', value: distinctItems.toString()),
-          ],
-        ),
+        LayoutBuilder(builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth < 720 ? 1 : constraints.maxWidth < 1100 ? 2 : 4;
+          return GridView.count(crossAxisCount: crossAxisCount, crossAxisSpacing: 16, mainAxisSpacing: 16, shrinkWrap: true, childAspectRatio: 2.8, physics: const NeverScrollableScrollPhysics(), children: [StatCard(label: 'Total Spend', value: _currency(totalSpend)), StatCard(label: 'Total Units Purchased', value: totalUnits.toString()), StatCard(label: 'Avg Cost / Unit', value: _currency(avgCost)), StatCard(label: 'Distinct Items', value: distinctItems.toString())]);
+        }),
         const SizedBox(height: 24),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : SectionCard(
-                  title: 'Purchases',
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final maxHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 600.0;
-                      return SizedBox(
-                        height: maxHeight,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ScrollableDataTable(
-                                table: DataTable(
-                                  columns: const [
-                                    DataColumn(label: Text('Total Price')),
-                                    DataColumn(label: Text('Bought Date')),
-                                    DataColumn(label: Text('Actions')),
-                                  ],
-                                  rows: _purchaseOrders
-                                      .map(
-                                        (purchase) => DataRow(
-                                          selected: purchase['id'] == _selectedPurchaseId,
-                                          onSelectChanged: (_) =>
-                                              setState(() => _selectedPurchaseId = purchase['id'] as String?),
-                                          cells: [
-                                            DataCell(Text(_currency(
-                                                _purchaseTotal(purchase['id'] as String? ?? '')))),
-                                            DataCell(Text(purchase['bought_date'] ?? '')),
-                                            DataCell(
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(Icons.edit),
-                                                    onPressed: () => _openPurchaseOrderDialog(purchase: purchase),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.delete),
-                                                    onPressed: () => _deletePurchaseOrder(purchase['id'] as String),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: ScrollableDataTable(
-                                table: DataTable(
-                                  columns: const [
-                                    DataColumn(label: Text('Purchase')),
-                                    DataColumn(label: Text('Item')),
-                                    DataColumn(label: Text('Brand')),
-                                    DataColumn(label: Text('Size')),
-                                    DataColumn(label: Text('Qty')),
-                                    DataColumn(label: Text('Unit Price')),
-                                    DataColumn(label: Text('Line Total')),
-                                    DataColumn(label: Text('Stock')),
-                                    DataColumn(label: Text('Actions')),
-                                  ],
-                                  rows: selectedDetails
-                                      .map(
-                                        (detail) => DataRow(
-                                          cells: [
-                                            DataCell(Text(_purchaseLabel(detail['purchases']))),
-                                            DataCell(Text(detail['items']?['title'] ?? '')),
-                                            DataCell(Text(detail['items']?['brand'] ?? '')),
-                                            DataCell(Text(detail['size'] ?? '')),
-                                            DataCell(Text('${detail['quantity']}')),
-                                            DataCell(Text(_currency(detail['unit_price'] as num))),
-                                            DataCell(Text(_currency(
-                                                (detail['unit_price'] as num) * (detail['quantity'] as int)))),
-                                            DataCell(
-                                              detail['added_to_stock'] == true
-                                                  ? const Text('Added')
-                                                  : TextButton(
-                                                      onPressed: () => _addToStock(detail),
-                                                      child: const Text('Add to stock'),
-                                                    ),
-                                            ),
-                                            DataCell(
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(Icons.edit),
-                                                    onPressed: () => _openPurchaseDetailDialog(detail: detail),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.delete),
-                                                    onPressed: () => _deletePurchaseDetail(detail['id'] as String),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
+        Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) : LayoutBuilder(builder: (context, constraints) {
+          final isStacked = constraints.maxWidth < 1100;
+          final availableHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 560.0;
+          final cardChromeHeight = 120.0;
+          final purchasesHeight = isStacked ? 220.0 : math.max(availableHeight - cardChromeHeight, 160.0);
+          final detailsHeight = isStacked ? 260.0 : math.max(availableHeight - cardChromeHeight, 200.0);
+          final purchasesCard = SectionCard(title: 'Purchases', child: SizedBox(height: purchasesHeight, child: ScrollableDataTable(minWidth: 520, table: DataTable(columns: const [DataColumn(label: Text('Total Price')), DataColumn(label: Text('Bought Date')), DataColumn(label: Text('Actions'))], rows: _purchaseOrders.map((purchase) => DataRow(selected: purchase['id'] == _selectedPurchaseId, onSelectChanged: (_) => setState(() => _selectedPurchaseId = purchase['id'] as String?), cells: [DataCell(Text(_currency(_purchaseTotal(purchase['id'] as String? ?? '')))), DataCell(Text(purchase['bought_date'] ?? '')), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseOrderDialog(purchase: purchase)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseOrder(purchase['id'] as String))]))])).toList()))));
+          final detailsCard = SectionCard(title: 'Purchase details', child: SizedBox(height: detailsHeight, child: ScrollableDataTable(minWidth: 940, table: DataTable(columns: const [DataColumn(label: Text('Purchase')), DataColumn(label: Text('Item')), DataColumn(label: Text('Brand')), DataColumn(label: Text('Size')), DataColumn(label: Text('Qty')), DataColumn(label: Text('Unit Price')), DataColumn(label: Text('Line Total')), DataColumn(label: Text('Stock')), DataColumn(label: Text('Actions'))], rows: selectedDetails.map((detail) => DataRow(cells: [DataCell(Text(_purchaseLabel(_purchaseOrders.firstWhere((e) => e['id'] == detail['purchase_id'], orElse: () => {})))), DataCell(Text(detail['items']?['title'] ?? '')), DataCell(Text(detail['items']?['brand'] ?? '')), DataCell(Text(detail['size'] ?? '')), DataCell(Text('${detail['quantity']}')), DataCell(Text(_currency(detail['unit_price'] as num))), DataCell(Text(_currency((detail['unit_price'] as num) * (detail['quantity'] as int)))), DataCell(detail['added_to_stock'] == true ? const Text('Added') : TextButton(onPressed: () => _addToStock(detail), child: const Text('Add to stock'))), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseDetailDialog(detail: detail)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseDetail(detail['id'] as String))]))])).toList()))));
+          if (isStacked) return Column(children: [purchasesCard, const SizedBox(height: 16), Expanded(child: detailsCard)]);
+          return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(flex: 5, child: purchasesCard), const SizedBox(width: 16), Expanded(flex: 8, child: detailsCard)]);
+        })),
       ],
     );
   }
 }
 
 String _currency(num value) => NumberFormat.currency(symbol: '£').format(value);
+String _formatDate(DateTime value) => DateFormat('yyyy-MM-dd').format(value);
 
-extension on List {
-  dynamic get firstOrNull => isEmpty ? null : first;
+class _Labeled extends StatelessWidget {
+  const _Labeled({required this.label, required this.child});
+  final String label;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF475569))), const SizedBox(height: 8), child]);
+  }
 }
+
+class _PickField extends StatelessWidget {
+  const _PickField({required this.value, required this.hint, required this.onTap});
+  final String? value;
+  final String hint;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final display = value?.trim();
+    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: InputDecorator(decoration: const InputDecoration(suffixIcon: Icon(Icons.arrow_drop_down)), child: Text(display == null || display.isEmpty ? hint : display)));
+  }
+}
+
+

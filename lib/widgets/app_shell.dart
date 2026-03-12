@@ -9,30 +9,56 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      body: Row(
-        children: [
-          const _Sidebar(),
-          Expanded(
-            child: Container(
-              color: theme.scaffoldBackgroundColor,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(1.0, -1.0),
+            radius: 1.4,
+            colors: [
+              Color(0xFFF5F3FF),
+              Color(0xFFF8FBFF),
+              Color(0xFFF6F7FB),
+            ],
+            stops: [0.0, 0.35, 1.0],
+          ),
+        ),
+        child: Row(
+          children: [
+            const _Sidebar(),
+            Expanded(
               child: SafeArea(
-                child: Column(
-                  children: [
-                    const _TopBar(),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                        child: child,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const _TopBar(),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDFDFE).withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFEEF1FF)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color.fromRGBO(37, 52, 95, 0.12),
+                                blurRadius: 32,
+                                offset: Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: child,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -46,17 +72,13 @@ class _TopBar extends StatelessWidget {
     final theme = Theme.of(context);
     final user = Supabase.instance.client.auth.currentUser;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Row(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Inventory Workspace', style: theme.textTheme.titleLarge),
+              Text('Reseller Command Center', style: theme.textTheme.titleLarge),
               const SizedBox(height: 2),
               Text(
                 'Track stock, purchases, and sales in one place.',
@@ -69,7 +91,7 @@ class _TopBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: Colors.white.withOpacity(0.55),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -81,7 +103,7 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           const SizedBox(width: 16),
-          FilledButton.tonalIcon(
+          OutlinedButton.icon(
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
               if (context.mounted) {
@@ -104,46 +126,46 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 248,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: const Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+      width: 260,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF1F1B45),
+            Color(0xFF252F5F),
+            Color(0xFF1F2937),
+          ],
+          stops: [0.0, 0.6, 1.0],
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 18,
-                backgroundColor: Color(0xFF2563EB),
-                child: Icon(Icons.inventory_2, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Vinted Inventory',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-            ],
+          Text(
+            'Inventory Workspace',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+            ),
           ),
           const SizedBox(height: 20),
           Expanded(
             child: ListView(
               children: const [
-                _NavItem(label: 'Dashboard', route: '/', icon: Icons.dashboard),
-                _NavItem(label: 'Items', route: '/items', icon: Icons.style),
-                _NavItem(label: 'Purchase History', route: '/purchases', icon: Icons.receipt_long),
-                _NavItem(label: 'Stock', route: '/stock', icon: Icons.inventory),
-                _NavItem(label: 'Sales', route: '/sales', icon: Icons.trending_up),
+                _NavItem(label: 'Dashboard', route: '/', icon: Icons.home_outlined),
+                _NavItem(label: 'Items', route: '/items', icon: Icons.inventory_2_outlined),
+                _NavItem(label: 'Purchase History', route: '/purchase-history', icon: Icons.history),
+                _NavItem(label: 'Stock', route: '/stock', icon: Icons.storage_outlined),
+                _NavItem(label: 'Sales', route: '/sales', icon: Icons.shopping_cart_outlined),
               ],
             ),
           ),
           Text(
-            'Simple inventory tracking for Vinted sellers.',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
+            'Inventory, stock, purchases, and sales in one workspace.',
+            style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFFE5E7EB)),
           ),
         ],
       ),
@@ -162,17 +184,17 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isActive = GoRouterState.of(context).uri.toString() == route;
-    final color = isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+    final color = isActive ? Colors.white : const Color(0xFFE5E7EB);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: isActive ? theme.colorScheme.primary.withOpacity(0.08) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: () => context.go(route),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 Icon(icon, size: 18, color: color),
@@ -181,7 +203,7 @@ class _NavItem extends StatelessWidget {
                   label,
                   style: theme.textTheme.bodyMedium?.copyWith(
                         color: color,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                       ),
                 ),
               ],

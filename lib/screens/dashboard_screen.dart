@@ -526,6 +526,7 @@ class _SalesTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScrollableDataTable(
+      minWidth: 560,
       table: DataTable(
         columns: const [
           DataColumn(label: Text('Item')),
@@ -558,6 +559,7 @@ class _StockTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScrollableDataTable(
+      minWidth: 560,
       table: DataTable(
         columns: const [
           DataColumn(label: Text('Item')),

@@ -147,19 +147,28 @@ class _StockScreenState extends State<StockScreen> {
       children: [
         Text('Stock', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
-        GridView.count(
-          crossAxisCount: 4,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          shrinkWrap: true,
-          childAspectRatio: 2.6,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            StatCard(label: 'Items in Stock', value: itemsInStock.toString()),
-            StatCard(label: 'Total Units', value: totalUnits.toString()),
-            StatCard(label: 'Inventory Cost', value: _currency(inventoryCost)),
-            StatCard(label: 'Total Spend', value: _currency(totalSpend)),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 720
+                ? 1
+                : constraints.maxWidth < 1100
+                    ? 2
+                    : 4;
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              childAspectRatio: 2.8,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                StatCard(label: 'Items in Stock', value: itemsInStock.toString()),
+                StatCard(label: 'Total Units', value: totalUnits.toString()),
+                StatCard(label: 'Inventory Cost', value: _currency(inventoryCost)),
+                StatCard(label: 'Total Spend', value: _currency(totalSpend)),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 24),
         Expanded(
@@ -168,6 +177,7 @@ class _StockScreenState extends State<StockScreen> {
               : SectionCard(
                   title: 'Stock',
                   child: ScrollableDataTable(
+                    minWidth: 1180,
                     table: DataTable(
                       columns: const [
                         DataColumn(label: Text('Image')),

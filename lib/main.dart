@@ -24,19 +24,23 @@ class StockApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final router = buildRouter();
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2563EB),
+      seedColor: const Color(0xFF4F46E5),
       brightness: Brightness.light,
+    ).copyWith(
+      surface: Colors.white,
+      onSurface: const Color(0xFF111827),
+      primary: const Color(0xFF4F46E5),
     );
     return MaterialApp.router(
-      title: 'Vinted Inventory Assistant',
+      title: 'Stock Plunge',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        scaffoldBackgroundColor: Colors.transparent,
         cardTheme: CardThemeData(
           color: colorScheme.surface,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         dividerTheme: const DividerThemeData(color: Color(0xFFE2E8F0)),
         dataTableTheme: const DataTableThemeData(
@@ -56,63 +60,64 @@ class StockApp extends StatelessWidget {
           ),
           dataTextStyle: TextStyle(
             fontSize: 13,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF1F2937),
           ),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFF8FAFC),
-          foregroundColor: Color(0xFF0F172A),
+          backgroundColor: Colors.transparent,
+          foregroundColor: Color(0xFF111827),
           elevation: 0,
           centerTitle: false,
         ),
         dialogTheme: DialogThemeData(
           backgroundColor: colorScheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           titleTextStyle: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF111827),
           ),
           contentTextStyle: const TextStyle(
             fontSize: 14,
-            color: Color(0xFF475569),
+            color: Color(0xFF6B7280),
           ),
         ),
         textTheme: const TextTheme(
           headlineMedium: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF111827),
           ),
           titleLarge: TextStyle(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF111827),
           ),
           titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A),
+            color: Color(0xFF111827),
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF475569),
+            color: Color(0xFF6B7280),
           ),
           bodySmall: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF64748B),
+            color: Color(0xFF6B7280),
           ),
           labelLarge: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF64748B),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF6B7280),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
+          hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -130,6 +135,8 @@ class StockApp extends StatelessWidget {
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: const Color(0xFF4F46E5),
+            foregroundColor: Colors.white,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -138,6 +145,9 @@ class StockApp extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
         ),
       ),
       routerConfig: router,

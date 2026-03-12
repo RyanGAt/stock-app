@@ -44,8 +44,12 @@ GoRouter buildRouter() {
             builder: (context, state) => const ItemsScreen(),
           ),
           GoRoute(
-            path: '/purchases',
+            path: '/purchase-history',
             builder: (context, state) => const PurchaseHistoryScreen(),
+          ),
+          GoRoute(
+            path: '/purchases',
+            redirect: (context, state) => '/purchase-history',
           ),
           GoRoute(
             path: '/stock',

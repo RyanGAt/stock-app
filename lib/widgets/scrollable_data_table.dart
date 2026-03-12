@@ -34,8 +34,9 @@ class _ScrollableDataTableState extends State<ScrollableDataTable> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+            color: Colors.white,
             border: Border.all(color: const Color(0xFFE2E8F0)),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -45,13 +46,22 @@ class _ScrollableDataTableState extends State<ScrollableDataTable> {
               controller: _horizontalController,
               thumbVisibility: true,
               notificationPredicate: (notification) => notification.metrics.axis == Axis.horizontal,
-              child: SingleChildScrollView(
-                controller: _horizontalController,
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: widget.minWidth ?? 0),
-                  child: widget.table,
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final targetWidth = widget.minWidth == null
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth > widget.minWidth!
+                          ? constraints.maxWidth
+                          : widget.minWidth!);
+                  return SingleChildScrollView(
+                    controller: _horizontalController,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: targetWidth,
+                      child: widget.table,
+                    ),
+                  );
+                },
               ),
             ),
           ),
