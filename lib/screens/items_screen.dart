@@ -371,12 +371,11 @@ class _ItemsScreenState extends State<ItemsScreen> {
                     .toList(),
               )
             : SectionCard(
-            title: 'Items',
-            child: SizedBox(
-              height: isMobile ? 420 : null,
-              child: ScrollableDataTable(
-                minWidth: isMobile ? 760 : 1040,
-                table: DataTable(
+                title: 'Items',
+                expandChild: true,
+                child: ScrollableDataTable(
+                  minWidth: 1040,
+                  table: DataTable(
                   columns: const [
                     DataColumn(label: Text('Image')),
                     DataColumn(label: Text('Title')),
@@ -419,8 +418,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                       .toList(),
                 ),
               ),
-            ),
-          );
+            );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,

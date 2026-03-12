@@ -544,12 +544,11 @@ class _SalesScreenState extends State<SalesScreen> {
                     .toList(),
               )
             : SectionCard(
-            title: 'Sales',
-            child: SizedBox(
-              height: isMobile ? 430 : null,
-              child: ScrollableDataTable(
-                minWidth: isMobile ? 820 : 1280,
-                table: DataTable(
+                title: 'Sales',
+                expandChild: true,
+                child: ScrollableDataTable(
+                  minWidth: 1280,
+                  table: DataTable(
                   columns: const [
                     DataColumn(label: Text('Item')),
                     DataColumn(label: Text('Size')),
@@ -617,8 +616,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       .toList(),
                 ),
               ),
-            ),
-          );
+            );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,

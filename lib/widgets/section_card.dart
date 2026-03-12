@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, required this.title, required this.child});
+  const SectionCard({
+    super.key,
+    required this.title,
+    required this.child,
+    this.expandChild = false,
+  });
 
   final String title;
   final Widget child;
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +37,7 @@ class SectionCard extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           SizedBox(height: compact ? 12 : 16),
-          child,
+          if (expandChild) Expanded(child: child) else child,
         ],
       ),
     );

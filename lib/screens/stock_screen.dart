@@ -236,12 +236,11 @@ class _StockScreenState extends State<StockScreen> {
                     .toList(),
               )
             : SectionCard(
-            title: 'Stock',
-            child: SizedBox(
-              height: isMobile ? 430 : null,
-              child: ScrollableDataTable(
-                minWidth: isMobile ? 860 : 1180,
-                table: DataTable(
+                title: 'Stock',
+                expandChild: true,
+                child: ScrollableDataTable(
+                  minWidth: 1180,
+                  table: DataTable(
                   columns: const [
                     DataColumn(label: Text('Image')),
                     DataColumn(label: Text('Item')),
@@ -301,8 +300,7 @@ class _StockScreenState extends State<StockScreen> {
                       .toList(),
                 ),
               ),
-            ),
-          );
+            );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
