@@ -1,74 +1,88 @@
 workflows:
-  yaml-auto-native:
-    name: YAML Auto Native Build
+  macos-release:
+    name: macOS Release
     max_build_duration: 60
     instance_type: mac_mini_m2
-    environment:
-      flutter: stable
-      xcode: latest
-    scripts:
-      - name: Verify YAML workflow is running
-        script: |
-          echo "Running workflow from codemagic.yaml"
-          echo "Branch: $CM_BRANCH"
-          echo "Commit: $CM_COMMIT"
-          pwd
-      - name: Install dependencies
-        script: |
-          flutter pub get
-      - name: Restore Gradle wrapper jar (not tracked in git)
-        script: |
-          gradle -p android wrapper --gradle-version 8.11.1 --distribution-type bin
-          test -s android/gradle/wrapper/gradle-wrapper.jar
-      - name: Install required Android SDK components
-        script: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-      - name: Build Android APK
-        script: |
-          flutter build apk --debug
-      - name: Build iOS Simulator app
-        script: |
-          flutter build ios --debug --simulator
-    artifacts:
-      - build/**/outputs/**/*.apk
-      - build/ios/iphoneos/*.app
-      - build/ios/iphonesimulator/*.app
-      - flutter_drive.log
 
-  default-workflow:
-    name: Default Workflow
-    max_build_duration: 60
-    instance_type: mac_mini_m2
     environment:
       flutter: stable
       xcode: latest
+
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
     scripts:
-      - name: Verify YAML workflow is running
+      - name: Verify workflow
         script: |
-          echo "Running workflow from codemagic.yaml"
+          echo "Running macOS release workflow"
           echo "Branch: $CM_BRANCH"
           echo "Commit: $CM_COMMIT"
           pwd
+
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Restore Gradle wrapper jar (not tracked in git)
+
+      - name: Build macOS release
         script: |
-          gradle -p android wrapper --gradle-version 8.11.1 --distribution-type bin
-          test -s android/gradle/wrapper/gradle-wrapper.jar
-      - name: Install required Android SDK components
+          flutter build macos --release
+
+      - name: Zip macOS app
         script: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-      - name: Build Android APK
-        script: |
-          flutter build apk --debug
-      - name: Build iOS Simulator app
-        script: |
-          flutter build ios --debug --simulator
+          cd build/macos/Build/Products/Release
+          APP_NAME=$(find . -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$APP_NAME" ]; then
+            echo "No .app bundle found in build output"
+            exit 1
+          fi
+          zip -r stock-app-macos.zip "$APP_NAME"
+
     artifacts:
-      - build/**/outputs/**/*.apk
-      - build/ios/iphoneos/*.app
-      - build/ios/iphonesimulator/*.app
-      - flutter_drive.log
+      - build/macos/Build/Products/Release/*.app
+      - build/macos/Build/Products/Release/stock-app-macos.zip
+
+  windows-release:
+    name: Windows Release
+    max_build_duration: 60
+    instance_type: windows_x2
+
+    environment:
+      flutter: stable
+
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
+    scripts:
+      - name: Verify workflow
+        script: |
+          echo Running Windows release workflow
+          echo Branch: %CM_BRANCH%
+          echo Commit: %CM_COMMIT%
+          cd
+
+      - name: Install dependencies
+        script: |
+          flutter pub get
+
+      - name: Build Windows release
+        script: |
+          flutter build windows --release
+
+      - name: Zip Windows app
+        script: |
+          powershell -Command "Compress-Archive -Path 'build\\windows\\x64\\runner\\Release\\*' -DestinationPath 'build\\windows\\x64\\runner\\Release\\stock-app-windows.zip' -Force"
+
+    artifacts:
+      - build/windows/x64/runner/Release/stock-app-windows.zip
