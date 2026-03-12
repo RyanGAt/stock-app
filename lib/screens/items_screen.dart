@@ -62,7 +62,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
       barrierColor: const Color.fromRGBO(15, 23, 42, 0.38),
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 700 ? 12 : 24,
+            vertical: 24,
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
             child: Padding(
@@ -256,8 +259,86 @@ class _ItemsScreenState extends State<ItemsScreen> {
     await _load();
   }
 
+  Future<void> _showItemDetails(Map<String, dynamic> item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _ItemThumbnail(
+                    imageUrl: item['main_image_url'] as String?,
+                    title: item['title'] as String? ?? '',
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item['title'] ?? '', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(
+                          [item['brand'] ?? '', item['category'] ?? '']
+                              .where((value) => (value as String).toString().isNotEmpty)
+                              .join(' | '),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _MobileDetailRow(label: 'Brand', value: item['brand'] ?? '-'),
+              _MobileDetailRow(label: 'Category', value: item['category'] ?? '-'),
+              _MobileDetailRow(
+                label: 'Created',
+                value: DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)),
+              ),
+              _MobileDetailRow(label: 'Description', value: item['description'] ?? '-'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _openItemDialog(item: item);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteItem(item['id'] as String);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
     final filteredItems = _items.where((item) {
       final term = _searchController.text.toLowerCase();
       return term.isEmpty ||
@@ -265,13 +346,92 @@ class _ItemsScreenState extends State<ItemsScreen> {
           (item['brand'] as String? ?? '').toLowerCase().contains(term);
     }).toList();
 
-    return Column(
+    final tableSection = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : isMobile
+            ? Column(
+                children: filteredItems
+                    .map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _MobileSummaryCard(
+                          onTap: () => _showItemDetails(item),
+                          leading: _ItemThumbnail(
+                            imageUrl: item['main_image_url'] as String?,
+                            title: item['title'] as String? ?? '',
+                          ),
+                          title: item['title'] ?? '',
+                          subtitle: [item['brand'] ?? '', item['category'] ?? '']
+                              .where((value) => (value as String).toString().isNotEmpty)
+                              .join(' | '),
+                          trailing: DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              )
+            : SectionCard(
+            title: 'Items',
+            child: SizedBox(
+              height: isMobile ? 420 : null,
+              child: ScrollableDataTable(
+                minWidth: isMobile ? 760 : 1040,
+                table: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Image')),
+                    DataColumn(label: Text('Title')),
+                    DataColumn(label: Text('Brand')),
+                    DataColumn(label: Text('Category')),
+                    DataColumn(label: Text('Created At')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: filteredItems
+                      .map(
+                        (item) => DataRow(
+                          cells: [
+                            DataCell(
+                              _ItemThumbnail(
+                                imageUrl: item['main_image_url'] as String?,
+                                title: item['title'] as String? ?? '',
+                              ),
+                            ),
+                            DataCell(Text(item['title'] ?? '')),
+                            DataCell(Text(item['brand'] ?? '')),
+                            DataCell(Text(item['category'] ?? '')),
+                            DataCell(Text(DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)))),
+                            DataCell(
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () => _openItemDialog(item: item),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => _deleteItem(item['id'] as String),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          );
+
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text('Items', style: Theme.of(context).textTheme.headlineMedium),
-            const Spacer(),
             FilledButton.icon(
               onPressed: () => _openItemDialog(),
               icon: const Icon(Icons.add),
@@ -286,60 +446,17 @@ class _ItemsScreenState extends State<ItemsScreen> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : SectionCard(
-                  title: 'Items',
-                  child: ScrollableDataTable(
-                    minWidth: 1040,
-                    table: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Image')),
-                        DataColumn(label: Text('Title')),
-                        DataColumn(label: Text('Brand')),
-                        DataColumn(label: Text('Category')),
-                        DataColumn(label: Text('Created At')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: filteredItems
-                          .map(
-                            (item) => DataRow(
-                              cells: [
-                                DataCell(
-                                  _ItemThumbnail(
-                                    imageUrl: item['main_image_url'] as String?,
-                                    title: item['title'] as String? ?? '',
-                                  ),
-                                ),
-                                DataCell(Text(item['title'] ?? '')),
-                                DataCell(Text(item['brand'] ?? '')),
-                                DataCell(Text(item['category'] ?? '')),
-                                DataCell(Text(DateFormat.yMMMd().format(DateTime.parse(item['created_at'] as String)))),
-                                DataCell(
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit),
-                                        onPressed: () => _openItemDialog(item: item),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        onPressed: () => _deleteItem(item['id'] as String),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ),
-        ),
+        if (isMobile) tableSection else Expanded(child: tableSection),
       ],
     );
+
+    if (isMobile) {
+      return SingleChildScrollView(
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 
@@ -599,6 +716,91 @@ class _ItemImage extends StatelessWidget {
       trimmed,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => errorChild ?? emptyChild,
+    );
+  }
+}
+
+class _MobileSummaryCard extends StatelessWidget {
+  const _MobileSummaryCard({
+    required this.onTap,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  final VoidCallback onTap;
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final String trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(subtitle.isEmpty ? '-' : subtitle, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(trailing, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 6),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileDetailRow extends StatelessWidget {
+  const _MobileDetailRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF64748B))),
+          const SizedBox(height: 2),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
     );
   }
 }

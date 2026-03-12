@@ -15,9 +15,10 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 700;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(compact ? 14 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.8),
@@ -44,6 +45,7 @@ class StatCard extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF111827),
+                  fontSize: compact ? 18 : null,
                 ),
           ),
           if (subtitle != null) ...[

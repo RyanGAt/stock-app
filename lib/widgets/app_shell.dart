@@ -9,109 +9,190 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(1.0, -1.0),
-            radius: 1.4,
-            colors: [
-              Color(0xFFF5F3FF),
-              Color(0xFFF8FBFF),
-              Color(0xFFF6F7FB),
-            ],
-            stops: [0.0, 0.35, 1.0],
-          ),
-        ),
-        child: Row(
-          children: [
-            const _Sidebar(),
-            Expanded(
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      const _TopBar(),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFDFDFE).withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFEEF1FF)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color.fromRGBO(37, 52, 95, 0.12),
-                                blurRadius: 32,
-                                offset: Offset(0, 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 900;
+        final outerPadding = isMobile ? 12.0 : 24.0;
+        final contentPadding = isMobile ? 16.0 : 24.0;
+
+        return Scaffold(
+          drawer: isMobile
+              ? Drawer(
+                  child: SafeArea(
+                    child: _Sidebar(isDrawer: true),
+                  ),
+                )
+              : null,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(1.0, -1.0),
+                radius: 1.4,
+                colors: [
+                  Color(0xFFF5F3FF),
+                  Color(0xFFF8FBFF),
+                  Color(0xFFF6F7FB),
+                ],
+                stops: [0.0, 0.35, 1.0],
+              ),
+            ),
+            child: isMobile
+                ? SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.all(outerPadding),
+                      child: Column(
+                        children: [
+                          const _TopBar(showMenuButton: true),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(contentPadding),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFDFDFE).withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFEEF1FF)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(37, 52, 95, 0.12),
+                                    blurRadius: 32,
+                                    offset: Offset(0, 12),
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: child,
+                            ),
                           ),
-                          child: child,
+                        ],
+                      ),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      const _Sidebar(),
+                      Expanded(
+                        child: SafeArea(
+                          child: Padding(
+                            padding: EdgeInsets.all(outerPadding),
+                            child: Column(
+                              children: [
+                                const _TopBar(),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: Container(
+                                    padding: EdgeInsets.all(contentPadding),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFDFDFE).withOpacity(0.95),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: const Color(0xFFEEF1FF)),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color.fromRGBO(37, 52, 95, 0.12),
+                                          blurRadius: 32,
+                                          offset: Offset(0, 12),
+                                        ),
+                                      ],
+                                    ),
+                                    child: child,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar();
+  const _TopBar({this.showMenuButton = false});
+
+  final bool showMenuButton;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = Supabase.instance.client.auth.currentUser;
+    final isCompact = MediaQuery.sizeOf(context).width < 700;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Reseller Command Center', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 2),
-              Text(
-                'Track stock, purchases, and sales in one place.',
-                style: theme.textTheme.bodySmall,
+              if (showMenuButton) ...[
+                IconButton(
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu_rounded),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Reseller Command Center', style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Track stock, purchases, and sales in one place.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const Spacer(),
-          if (user != null && user.email != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(20),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: isCompact ? WrapAlignment.start : WrapAlignment.end,
+            children: [
+              if (user != null && user.email != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 6),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: isCompact ? 190 : 260),
+                        child: Text(
+                          user.email!,
+                          style: theme.textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Sign out'),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
-                  const SizedBox(width: 6),
-                  Text(user.email!, style: theme.textTheme.bodySmall),
-                ],
-              ),
-            ),
-          const SizedBox(width: 16),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Sign out'),
+            ],
           ),
         ],
       ),
@@ -120,13 +201,15 @@ class _TopBar extends StatelessWidget {
 }
 
 class _Sidebar extends StatelessWidget {
-  const _Sidebar();
+  const _Sidebar({this.isDrawer = false});
+
+  final bool isDrawer;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 260,
+      width: isDrawer ? double.infinity : 260,
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -154,6 +237,7 @@ class _Sidebar extends StatelessWidget {
           const SizedBox(height: 20),
           Expanded(
             child: ListView(
+              shrinkWrap: true,
               children: const [
                 _NavItem(label: 'Dashboard', route: '/', icon: Icons.home_outlined),
                 _NavItem(label: 'Items', route: '/items', icon: Icons.inventory_2_outlined),

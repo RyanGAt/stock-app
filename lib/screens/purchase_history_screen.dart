@@ -278,37 +278,231 @@ class _PurchaseHistoryScreenState extends State<PurchaseHistoryScreen> {
   Future<void> _deletePurchaseDetail(String id) async { await _service.deletePurchaseDetail(id); await _load(); _showToast('Purchase item deleted.'); }
   void _showToast(String message) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); }
 
+  Future<void> _showPurchaseOrderDetails(Map<String, dynamic> purchase) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Purchase', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              _MobilePurchaseDetailRow(label: 'Bought Date', value: purchase['bought_date'] ?? '-'),
+              _MobilePurchaseDetailRow(
+                label: 'Total',
+                value: _currency(_purchaseTotal(purchase['id'] as String? ?? '')),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _openPurchaseOrderDialog(purchase: purchase);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deletePurchaseOrder(purchase['id'] as String);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPurchaseItemDetails(Map<String, dynamic> detail) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(detail['items']?['title'] ?? '', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              _MobilePurchaseDetailRow(label: 'Brand', value: detail['items']?['brand'] ?? '-'),
+              _MobilePurchaseDetailRow(label: 'Size', value: detail['size'] ?? '-'),
+              _MobilePurchaseDetailRow(label: 'Quantity', value: '${detail['quantity']}'),
+              _MobilePurchaseDetailRow(label: 'Unit Price', value: _currency(detail['unit_price'] as num)),
+              _MobilePurchaseDetailRow(
+                label: 'Line Total',
+                value: _currency((detail['unit_price'] as num) * (detail['quantity'] as int)),
+              ),
+              _MobilePurchaseDetailRow(
+                label: 'Stock',
+                value: detail['added_to_stock'] == true ? 'Added' : 'Not added',
+              ),
+              const SizedBox(height: 16),
+              if (detail['added_to_stock'] != true)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _addToStock(detail);
+                      },
+                      child: const Text('Add to stock'),
+                    ),
+                  ),
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _openPurchaseDetailDialog(detail: detail);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deletePurchaseDetail(detail['id'] as String);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
     final totalSpend = _purchaseDetails.fold<num>(0, (sum, row) => sum + (row['unit_price'] as num) * (row['quantity'] as int));
     final totalUnits = _purchaseDetails.fold<int>(0, (sum, row) => sum + (row['quantity'] as int));
     final avgCost = totalUnits == 0 ? 0 : totalSpend / totalUnits;
     final distinctItems = _purchaseDetails.map((row) => row['item_id']).toSet().length;
     final selectedDetails = _selectedPurchaseId == null ? <Map<String, dynamic>>[] : _purchaseDetails.where((row) => row['purchase_id'] == _selectedPurchaseId).toList();
 
-    return Column(
+    final tableContent = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : isMobile
+            ? Column(
+                children: [
+                  SectionCard(
+                    title: 'Purchases',
+                    child: SizedBox(
+                      height: 420,
+                      child: ListView.separated(
+                        itemCount: _purchaseOrders.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final purchase = _purchaseOrders[index];
+                          return _MobilePurchaseCard(
+                            onTap: () {
+                              setState(() => _selectedPurchaseId = purchase['id'] as String?);
+                            },
+                            title: _currency(_purchaseTotal(purchase['id'] as String? ?? '')),
+                            subtitle: purchase['bought_date'] ?? 'No date',
+                            selected: purchase['id'] == _selectedPurchaseId,
+                            buttonLabel: 'Details',
+                            onButtonTap: () => _showPurchaseOrderDetails(purchase),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SectionCard(
+                    title: 'Purchase details',
+                    child: Column(
+                      children: selectedDetails
+                          .map(
+                            (detail) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _MobilePurchaseCard(
+                                onTap: () => _showPurchaseItemDetails(detail),
+                                title: detail['items']?['title'] ?? '',
+                                subtitle: '${detail['size'] ?? '-'} | Qty ${detail['quantity']}',
+                                trailing: _currency((detail['unit_price'] as num) * (detail['quantity'] as int)),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              )
+            : LayoutBuilder(builder: (context, constraints) {
+            final isStacked = constraints.maxWidth < 1100;
+            final availableHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 560.0;
+            final cardChromeHeight = 120.0;
+            final purchasesHeight = isMobile
+                ? 220.0
+                : isStacked
+                    ? 220.0
+                    : math.max(availableHeight - cardChromeHeight, 160.0);
+            final detailsHeight = isMobile
+                ? 320.0
+                : isStacked
+                    ? 260.0
+                    : math.max(availableHeight - cardChromeHeight, 200.0);
+            final purchasesCard = SectionCard(title: 'Purchases', child: SizedBox(height: purchasesHeight, child: ScrollableDataTable(minWidth: isMobile ? 420 : 520, table: DataTable(columns: const [DataColumn(label: Text('Total Price')), DataColumn(label: Text('Bought Date')), DataColumn(label: Text('Actions'))], rows: _purchaseOrders.map((purchase) => DataRow(selected: purchase['id'] == _selectedPurchaseId, onSelectChanged: (_) => setState(() => _selectedPurchaseId = purchase['id'] as String?), cells: [DataCell(Text(_currency(_purchaseTotal(purchase['id'] as String? ?? '')))), DataCell(Text(purchase['bought_date'] ?? '')), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseOrderDialog(purchase: purchase)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseOrder(purchase['id'] as String))]))])).toList()))));
+            final detailsCard = SectionCard(title: 'Purchase details', child: SizedBox(height: detailsHeight, child: ScrollableDataTable(minWidth: isMobile ? 760 : 940, table: DataTable(columns: const [DataColumn(label: Text('Purchase')), DataColumn(label: Text('Item')), DataColumn(label: Text('Brand')), DataColumn(label: Text('Size')), DataColumn(label: Text('Qty')), DataColumn(label: Text('Unit Price')), DataColumn(label: Text('Line Total')), DataColumn(label: Text('Stock')), DataColumn(label: Text('Actions'))], rows: selectedDetails.map((detail) => DataRow(cells: [DataCell(Text(_purchaseLabel(_purchaseOrders.firstWhere((e) => e['id'] == detail['purchase_id'], orElse: () => {})))), DataCell(Text(detail['items']?['title'] ?? '')), DataCell(Text(detail['items']?['brand'] ?? '')), DataCell(Text(detail['size'] ?? '')), DataCell(Text('${detail['quantity']}')), DataCell(Text(_currency(detail['unit_price'] as num))), DataCell(Text(_currency((detail['unit_price'] as num) * (detail['quantity'] as int)))), DataCell(detail['added_to_stock'] == true ? const Text('Added') : TextButton(onPressed: () => _addToStock(detail), child: const Text('Add to stock'))), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseDetailDialog(detail: detail)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseDetail(detail['id'] as String))]))])).toList()))));
+            if (isStacked) {
+              return Column(children: [purchasesCard, const SizedBox(height: 16), detailsCard]);
+            }
+            return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(flex: 5, child: purchasesCard), const SizedBox(width: 16), Expanded(flex: 8, child: detailsCard)]);
+          });
+
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [Text('Purchase History', style: Theme.of(context).textTheme.headlineMedium), const Spacer(), FilledButton.icon(onPressed: () => _openPurchaseOrderDialog(), icon: const Icon(Icons.add), label: const Text('Add Purchase')), const SizedBox(width: 12), FilledButton.icon(onPressed: _purchaseOrders.isEmpty ? null : () => _openPurchaseDetailDialog(), icon: const Icon(Icons.playlist_add), label: const Text('Add Purchase Item'))]),
+        Wrap(spacing: 12, runSpacing: 12, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [Text('Purchase History', style: Theme.of(context).textTheme.headlineMedium), FilledButton.icon(onPressed: () => _openPurchaseOrderDialog(), icon: const Icon(Icons.add), label: const Text('Add Purchase')), FilledButton.icon(onPressed: _purchaseOrders.isEmpty ? null : () => _openPurchaseDetailDialog(), icon: const Icon(Icons.playlist_add), label: const Text('Add Purchase Item'))]),
         const SizedBox(height: 24),
         LayoutBuilder(builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth < 720 ? 1 : constraints.maxWidth < 1100 ? 2 : 4;
-          return GridView.count(crossAxisCount: crossAxisCount, crossAxisSpacing: 16, mainAxisSpacing: 16, shrinkWrap: true, childAspectRatio: 2.8, physics: const NeverScrollableScrollPhysics(), children: [StatCard(label: 'Total Spend', value: _currency(totalSpend)), StatCard(label: 'Total Units Purchased', value: totalUnits.toString()), StatCard(label: 'Avg Cost / Unit', value: _currency(avgCost)), StatCard(label: 'Distinct Items', value: distinctItems.toString())]);
+          final isPhone = constraints.maxWidth < 720;
+          final crossAxisCount = isPhone ? 2 : constraints.maxWidth < 1100 ? 2 : 4;
+          return GridView.count(crossAxisCount: crossAxisCount, crossAxisSpacing: 16, mainAxisSpacing: 16, shrinkWrap: true, childAspectRatio: isPhone ? 1.9 : 2.8, physics: const NeverScrollableScrollPhysics(), children: [StatCard(label: 'Total Spend', value: _currency(totalSpend)), StatCard(label: 'Total Units Purchased', value: totalUnits.toString()), StatCard(label: 'Avg Cost / Unit', value: _currency(avgCost)), StatCard(label: 'Distinct Items', value: distinctItems.toString())]);
         }),
         const SizedBox(height: 24),
-        Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) : LayoutBuilder(builder: (context, constraints) {
-          final isStacked = constraints.maxWidth < 1100;
-          final availableHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 560.0;
-          final cardChromeHeight = 120.0;
-          final purchasesHeight = isStacked ? 220.0 : math.max(availableHeight - cardChromeHeight, 160.0);
-          final detailsHeight = isStacked ? 260.0 : math.max(availableHeight - cardChromeHeight, 200.0);
-          final purchasesCard = SectionCard(title: 'Purchases', child: SizedBox(height: purchasesHeight, child: ScrollableDataTable(minWidth: 520, table: DataTable(columns: const [DataColumn(label: Text('Total Price')), DataColumn(label: Text('Bought Date')), DataColumn(label: Text('Actions'))], rows: _purchaseOrders.map((purchase) => DataRow(selected: purchase['id'] == _selectedPurchaseId, onSelectChanged: (_) => setState(() => _selectedPurchaseId = purchase['id'] as String?), cells: [DataCell(Text(_currency(_purchaseTotal(purchase['id'] as String? ?? '')))), DataCell(Text(purchase['bought_date'] ?? '')), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseOrderDialog(purchase: purchase)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseOrder(purchase['id'] as String))]))])).toList()))));
-          final detailsCard = SectionCard(title: 'Purchase details', child: SizedBox(height: detailsHeight, child: ScrollableDataTable(minWidth: 940, table: DataTable(columns: const [DataColumn(label: Text('Purchase')), DataColumn(label: Text('Item')), DataColumn(label: Text('Brand')), DataColumn(label: Text('Size')), DataColumn(label: Text('Qty')), DataColumn(label: Text('Unit Price')), DataColumn(label: Text('Line Total')), DataColumn(label: Text('Stock')), DataColumn(label: Text('Actions'))], rows: selectedDetails.map((detail) => DataRow(cells: [DataCell(Text(_purchaseLabel(_purchaseOrders.firstWhere((e) => e['id'] == detail['purchase_id'], orElse: () => {})))), DataCell(Text(detail['items']?['title'] ?? '')), DataCell(Text(detail['items']?['brand'] ?? '')), DataCell(Text(detail['size'] ?? '')), DataCell(Text('${detail['quantity']}')), DataCell(Text(_currency(detail['unit_price'] as num))), DataCell(Text(_currency((detail['unit_price'] as num) * (detail['quantity'] as int)))), DataCell(detail['added_to_stock'] == true ? const Text('Added') : TextButton(onPressed: () => _addToStock(detail), child: const Text('Add to stock'))), DataCell(Row(children: [IconButton(icon: const Icon(Icons.edit), onPressed: () => _openPurchaseDetailDialog(detail: detail)), IconButton(icon: const Icon(Icons.delete), onPressed: () => _deletePurchaseDetail(detail['id'] as String))]))])).toList()))));
-          if (isStacked) return Column(children: [purchasesCard, const SizedBox(height: 16), Expanded(child: detailsCard)]);
-          return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(flex: 5, child: purchasesCard), const SizedBox(width: 16), Expanded(flex: 8, child: detailsCard)]);
-        })),
+        if (isMobile) tableContent else Expanded(child: tableContent),
       ],
     );
+
+    if (isMobile) {
+      return SingleChildScrollView(child: content);
+    }
+
+    return content;
   }
 }
 
@@ -334,6 +528,100 @@ class _PickField extends StatelessWidget {
   Widget build(BuildContext context) {
     final display = value?.trim();
     return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: InputDecorator(decoration: const InputDecoration(suffixIcon: Icon(Icons.arrow_drop_down)), child: Text(display == null || display.isEmpty ? hint : display)));
+  }
+}
+
+class _MobilePurchaseCard extends StatelessWidget {
+  const _MobilePurchaseCard({
+    required this.onTap,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.selected = false,
+    this.buttonLabel,
+    this.onButtonTap,
+  });
+
+  final VoidCallback onTap;
+  final String title;
+  final String subtitle;
+  final String? trailing;
+  final bool selected;
+  final String? buttonLabel;
+  final VoidCallback? onButtonTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFFF5F3FF) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: selected ? const Color(0xFFC4B5FD) : const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                    if (buttonLabel != null && onButtonTap != null) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        onPressed: onButtonTap,
+                        child: Text(buttonLabel!),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (trailing != null) Text(trailing!, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobilePurchaseDetailRow extends StatelessWidget {
+  const _MobilePurchaseDetailRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF64748B))),
+          const SizedBox(height: 2),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
   }
 }
 

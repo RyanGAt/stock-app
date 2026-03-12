@@ -33,6 +33,7 @@ class DashboardScreen extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < 980;
+              final isMobile = constraints.maxWidth < 700;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -42,11 +43,11 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   GridView.count(
-                    crossAxisCount: isCompact ? 2 : 3,
+                    crossAxisCount: isMobile ? 2 : isCompact ? 2 : 3,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                     shrinkWrap: true,
-                    childAspectRatio: 2.4,
+                    childAspectRatio: isMobile ? 1.9 : 2.4,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       StatCard(label: 'Total Items', value: data.totalItems.toString()),
@@ -314,34 +315,36 @@ class _BarChart extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final barWidth = (constraints.maxWidth - (points.length - 1) * 12) / points.length;
+                const spacing = 12.0;
+                final totalSpacing = points.length > 1 ? (points.length - 1) * spacing : 0.0;
+                final barWidth = points.isEmpty ? 0.0 : (constraints.maxWidth - totalSpacing) / points.length;
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: points
-                      .map(
-                        (point) => Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: SizedBox(
-                            width: barWidth,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  height: maxValue == 0 ? 4 : (point.value / maxValue) * 140 + 4,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withOpacity(0.85),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(point.label, style: theme.textTheme.bodySmall),
-                              ],
+                  children: List.generate(points.length, (index) {
+                    final point = points[index];
+                    final isLast = index == points.length - 1;
+                    return Padding(
+                      padding: EdgeInsets.only(right: isLast ? 0 : spacing),
+                      child: SizedBox(
+                        width: barWidth,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              height: maxValue == 0 ? 4 : (point.value / maxValue) * 140 + 4,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(point.label, style: theme.textTheme.bodySmall),
+                          ],
                         ),
-                      )
-                      .toList(),
+                      ),
+                    );
+                  }),
                 );
               },
             ),

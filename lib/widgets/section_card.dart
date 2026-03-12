@@ -8,10 +8,10 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 700;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.8),
@@ -30,7 +30,7 @@ class SectionCard extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 12 : 16),
           child,
         ],
       ),

@@ -382,6 +382,85 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
+  Future<void> _showSaleDetails(Map<String, dynamic> sale) async {
+    final item = _items.firstWhere(
+      (row) => row['id'] == sale['item_id'],
+      orElse: () => {},
+    );
+    final avgCost = _costs
+            .firstWhere(
+              (cost) => cost['item_id'] == sale['item_id'],
+              orElse: () => {'avg_unit_cost': 0},
+            )['avg_unit_cost'] as num? ??
+        0;
+    final profit = (sale['sale_price'] as num? ?? 0) -
+        (sale['fees'] as num? ?? 0) -
+        (sale['shipping_cost'] as num? ?? 0) -
+        avgCost;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item['title'] ?? '', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                [sale['size'] ?? 'OS', sale['platform'] ?? '']
+                    .where((value) => (value as String).toString().isNotEmpty)
+                    .join(' | '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              _MobileSaleDetailRow(label: 'Sale Price', value: _currency(sale['sale_price'] as num? ?? 0)),
+              _MobileSaleDetailRow(label: 'Fees', value: _currency(sale['fees'] as num? ?? 0)),
+              _MobileSaleDetailRow(label: 'Shipping', value: _currency(sale['shipping_cost'] as num? ?? 0)),
+              _MobileSaleDetailRow(label: 'Profit', value: _currency(profit)),
+              _MobileSaleDetailRow(
+                label: 'Sold Date',
+                value: sale['sold_date'] == null
+                    ? '-'
+                    : DateFormat('yyyy-MM-dd').format(DateTime.parse(sale['sold_date'] as String)),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _openSaleDialog(sale: sale);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteSale(sale['id'] as String);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String? _itemLabel(String? itemId) {
     if (itemId == null) return null;
     final item = _items.cast<Map<String, dynamic>?>().firstWhere(
@@ -407,6 +486,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
     final filteredSales = _filteredSales();
     final platforms = [
       'All',
@@ -434,13 +514,122 @@ class _SalesScreenState extends State<SalesScreen> {
       return sum + (salePrice - fees - shipping - avgCost);
     });
 
-    return Column(
+    final tableSection = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : isMobile
+            ? Column(
+                children: filteredSales
+                    .map(
+                      (sale) {
+                        final item = _items.firstWhere(
+                          (row) => row['id'] == sale['item_id'],
+                          orElse: () => {},
+                        );
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _MobileSaleCard(
+                            onTap: () => _showSaleDetails(sale),
+                            title: item['title'] ?? '',
+                            subtitle: [sale['size'] ?? 'OS', sale['platform'] ?? '']
+                                .where((value) => (value as String).toString().isNotEmpty)
+                                .join(' | '),
+                            amount: _currency(sale['sale_price'] as num? ?? 0),
+                            meta: sale['sold_date'] == null
+                                ? 'No date'
+                                : DateFormat('yyyy-MM-dd').format(DateTime.parse(sale['sold_date'] as String)),
+                          ),
+                        );
+                      },
+                    )
+                    .toList(),
+              )
+            : SectionCard(
+            title: 'Sales',
+            child: SizedBox(
+              height: isMobile ? 430 : null,
+              child: ScrollableDataTable(
+                minWidth: isMobile ? 820 : 1280,
+                table: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Item')),
+                    DataColumn(label: Text('Size')),
+                    DataColumn(label: Text('Platform')),
+                    DataColumn(label: Text('Sale Price')),
+                    DataColumn(label: Text('Fees')),
+                    DataColumn(label: Text('Shipping')),
+                    DataColumn(label: Text('Sold Date')),
+                    DataColumn(label: Text('Profit')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: filteredSales
+                      .map(
+                        (sale) {
+                          final item = _items.firstWhere(
+                            (item) => item['id'] == sale['item_id'],
+                            orElse: () => {},
+                          );
+                          final avgCost = _costs
+                                  .firstWhere(
+                                    (cost) => cost['item_id'] == sale['item_id'],
+                                    orElse: () => {'avg_unit_cost': 0},
+                                  )['avg_unit_cost'] as num? ??
+                              0;
+                          final profit = (sale['sale_price'] as num? ?? 0) -
+                              (sale['fees'] as num? ?? 0) -
+                              (sale['shipping_cost'] as num? ?? 0) -
+                              avgCost;
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(item['title'] ?? '')),
+                              DataCell(Text((sale['size'] as String?)?.isNotEmpty == true ? sale['size'] : 'OS')),
+                              DataCell(Text(sale['platform'] ?? '')),
+                              DataCell(Text(_currency(sale['sale_price'] as num? ?? 0))),
+                              DataCell(Text(_currency(sale['fees'] as num? ?? 0))),
+                              DataCell(Text(_currency(sale['shipping_cost'] as num? ?? 0))),
+                              DataCell(
+                                Text(
+                                  sale['sold_date'] == null
+                                      ? ''
+                                      : DateFormat('yyyy-MM-dd').format(
+                                          DateTime.parse(sale['sold_date'] as String),
+                                        ),
+                                ),
+                              ),
+                              DataCell(Text(_currency(profit))),
+                              DataCell(
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _openSaleDialog(sale: sale),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _deleteSale(sale['id'] as String),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          );
+
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text('Sales', style: Theme.of(context).textTheme.headlineMedium),
-            const Spacer(),
             FilledButton.icon(
               onPressed: () => _openSaleDialog(),
               icon: const Icon(Icons.add),
@@ -451,17 +640,14 @@ class _SalesScreenState extends State<SalesScreen> {
         const SizedBox(height: 24),
         LayoutBuilder(
           builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth < 720
-                ? 1
-                : constraints.maxWidth < 1100
-                    ? 2
-                    : 3;
+            final isPhone = constraints.maxWidth < 720;
+            final crossAxisCount = isPhone ? 2 : constraints.maxWidth < 1100 ? 2 : 3;
             return GridView.count(
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               shrinkWrap: true,
-              childAspectRatio: 2.8,
+              childAspectRatio: isPhone ? 1.9 : 2.8,
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 StatCard(label: 'Total Revenue', value: _currency(totalRevenue)),
@@ -477,7 +663,7 @@ class _SalesScreenState extends State<SalesScreen> {
           runSpacing: 12,
           children: [
             SizedBox(
-              width: 220,
+              width: isMobile ? double.infinity : 220,
               child: DropdownButtonFormField<String>(
                 value: _platformFilter,
                 decoration: const InputDecoration(labelText: 'Platform'),
@@ -493,7 +679,7 @@ class _SalesScreenState extends State<SalesScreen> {
               ),
             ),
             SizedBox(
-              width: 220,
+              width: isMobile ? double.infinity : 220,
               child: DropdownButtonFormField<String>(
                 value: _timeframe,
                 decoration: const InputDecoration(labelText: 'Timeframe'),
@@ -506,85 +692,15 @@ class _SalesScreenState extends State<SalesScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : SectionCard(
-                  title: 'Sales',
-                  child: ScrollableDataTable(
-                    minWidth: 1280,
-                    table: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Item')),
-                        DataColumn(label: Text('Size')),
-                        DataColumn(label: Text('Platform')),
-                        DataColumn(label: Text('Sale Price')),
-                        DataColumn(label: Text('Fees')),
-                        DataColumn(label: Text('Shipping')),
-                        DataColumn(label: Text('Sold Date')),
-                        DataColumn(label: Text('Profit')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: filteredSales
-                          .map(
-                            (sale) {
-                              final item = _items.firstWhere(
-                                (item) => item['id'] == sale['item_id'],
-                                orElse: () => {},
-                              );
-                              final avgCost = _costs
-                                      .firstWhere(
-                                        (cost) => cost['item_id'] == sale['item_id'],
-                                        orElse: () => {'avg_unit_cost': 0},
-                                      )['avg_unit_cost'] as num? ??
-                                  0;
-                              final profit = (sale['sale_price'] as num? ?? 0) -
-                                  (sale['fees'] as num? ?? 0) -
-                                  (sale['shipping_cost'] as num? ?? 0) -
-                                  avgCost;
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(item['title'] ?? '')),
-                                  DataCell(Text((sale['size'] as String?)?.isNotEmpty == true ? sale['size'] : 'OS')),
-                                  DataCell(Text(sale['platform'] ?? '')),
-                                  DataCell(Text(_currency(sale['sale_price'] as num? ?? 0))),
-                                  DataCell(Text(_currency(sale['fees'] as num? ?? 0))),
-                                  DataCell(Text(_currency(sale['shipping_cost'] as num? ?? 0))),
-                                  DataCell(
-                                    Text(
-                                      sale['sold_date'] == null
-                                          ? ''
-                                          : DateFormat('yyyy-MM-dd').format(
-                                              DateTime.parse(sale['sold_date'] as String),
-                                            ),
-                                    ),
-                                  ),
-                                  DataCell(Text(_currency(profit))),
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit),
-                                          onPressed: () => _openSaleDialog(sale: sale),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete),
-                                          onPressed: () => _deleteSale(sale['id'] as String),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ),
-        ),
+        if (isMobile) tableSection else Expanded(child: tableSection),
       ],
     );
+
+    if (isMobile) {
+      return SingleChildScrollView(child: content);
+    }
+
+    return content;
   }
 }
 
@@ -856,6 +972,91 @@ class _SaleMetricRow extends StatelessWidget {
               ),
         ),
       ],
+    );
+  }
+}
+
+class _MobileSaleCard extends StatelessWidget {
+  const _MobileSaleCard({
+    required this.onTap,
+    required this.title,
+    required this.subtitle,
+    required this.amount,
+    required this.meta,
+  });
+
+  final VoidCallback onTap;
+  final String title;
+  final String subtitle;
+  final String amount;
+  final String meta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(subtitle.isEmpty ? '-' : subtitle, style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Text(meta, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF64748B))),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(amount, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSaleDetailRow extends StatelessWidget {
+  const _MobileSaleDetailRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF64748B))),
+          const SizedBox(height: 2),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
     );
   }
 }
