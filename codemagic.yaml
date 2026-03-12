@@ -29,9 +29,16 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Verify required environment variables
+        script: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+
       - name: Build macOS release
         script: |
-          flutter build macos --release
+          flutter build macos --release \
+            --dart-define=SUPABASE_URL=$SUPABASE_URL \
+            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 
       - name: Zip macOS app
         script: |
@@ -76,9 +83,14 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Verify required environment variables
+        script: |
+          if [ -z "%SUPABASE_URL%" ] exit /b 1
+          if [ -z "%SUPABASE_ANON_KEY%" ] exit /b 1
+
       - name: Build Windows release
         script: |
-          flutter build windows --release
+          flutter build windows --release --dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY%
 
       - name: Zip Windows app
         script: |
